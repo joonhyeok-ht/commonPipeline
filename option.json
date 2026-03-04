@@ -1,0 +1,103 @@
+{
+    "Version" : {
+        "Release" : "Common Pipeline v2.0",
+        "DESC": "Solution Common Pipeline"
+    },
+  
+    "DataRootPath" : "/Users/hutom/Desktop/solution/project/anaconda/Solution/Data/Colon/KNUCH_025_all",
+    "CL" : "processCL.sh",
+
+    "RegistrationInfo" : [
+        {"Target" : "targetMaskName", "Src" : "srcMaskName", "RigidAABB" : 1},
+        {"Target" : "targetMaskName", "Src" : "srcMaskName", "RigidAABB" : 0}
+    ],
+
+    "ResamplingToPhase" : [
+	    ["inMaskName", "outMaskName", "PP"]
+    ],
+    "ResamplingToMinSpacing" : [
+	    ["inMaskName", "outMaskName"]
+    ],
+
+    "Stricture" : [
+        ["inMaskName", "outMaskName"],
+        ["inMaskName", "outMaskName"]
+    ],
+
+    "Recon" : [
+	    {
+            "name" : "name",
+		    "contour" : 10,
+		    "gaussian" : 0,
+		    "algorithm" : "Marching",
+		    "resampling factor" : 1,
+		    "param" : [
+			    [80, 0.2, 0.0],
+			    [20, 0.1, 0.0],
+			    [10, 0.1, 0.0]
+		    ],
+		    "List" : [
+			    ["maskName0", "blenderName0", "PP", 10000],
+			    ["maskName1", "blenderName1", "PP", 10000],
+                ["maskName2", "blenderName2", "PP", 10000]
+		    ]
+	    }
+    ],
+    
+    "MeshBoolean" : [
+        ["subtraction", "blenderName0", "blenderName1", "blenderName"],
+        ["intersection", "blenderName0", "blenderName1", "blenderName"],
+        ["union", "blenderName0", "blenderName1", "blenderName"],
+        ["inside", "blenderName0", "blenderName1", "blenderName"],
+        ["outside", "blenderName0", "blenderName1", "blenderName"]
+    ],
+    "MeshHealing" : [
+        "blenderName0",
+        "blenderName1"
+    ],
+
+    "Blender" : {
+        "BlenderExe" : "/Applications/Blender.app/Contents/MacOS/Blender",
+        "Decimation" : {
+            "blenderName0" : 20000,
+            "blenderName1" : 500
+        },
+        "DecimationByRatio" : {
+            "blenderName0" : 20,
+            "blenderName1" : 20
+        },
+        "Remesh" : {
+            "VoxelSize" : 1,
+            "RemeshList" : {
+                "blenderName0" : 4000,
+                "blenderName1" : 4000
+            }
+        },
+        "MeshCleanUp" : [
+            "blenderName0",
+            "blenderName1"
+        ],
+        "SmartUV" : [
+            "blenderName0",
+            "blenderName1"
+        ]
+    },
+
+    "Centerline" : [
+        {
+		    "advancementRatio" : 1.001,
+		    "resamplingLength" : 1.0,
+		    "smoothingIter" : 10,
+		    "smoothingFactor" : 0.1,
+		    "List" : [
+			    ["blenderName0", "jsonName0"],
+                ["blenderName1", "jsonName1"]
+		    ]
+        }
+    ],
+    "TargetTerritoryList" : [
+        "blenderName0",
+        "blenderName1"
+    ]
+}
+
