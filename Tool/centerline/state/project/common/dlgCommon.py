@@ -44,6 +44,7 @@ import Block.reconstruction as reconstruction
 import Block.meshHealing as meshHealing
 import Block.meshBoolean as meshBoolean
 import Block.meshDecimation as meshDecimation
+import Block.makeInputFolder as makeInputFolder
 
 import vtkObjInterface as vtkObjInterface
 
@@ -84,6 +85,7 @@ QPushButton {
         btn.clicked.connect(self._on_btn_clear)
         self.m_mainLayout.addWidget(btn)
     def clear(self) :
+        self.m_phase = ""
         self.m_lbFile.clear()
 
     def get_fullpath_count(self) -> int :

@@ -2,6 +2,7 @@ import sys
 import os
 import numpy as np
 import shutil
+from pathlib import Path
 
 from PySide6.QtWidgets import QApplication, QMainWindow, QVBoxLayout, QPushButton, QWidget, QLineEdit, QListWidget
 from PySide6.QtCore import Qt
@@ -16,6 +17,8 @@ sys.path.append(fileAbsPath)
 sys.path.append(fileAppPath)
 sys.path.append(fileToolPath)
 sys.path.append(fileCommonPipelinePath)
+
+import Block.makeInputFolder as makeInputFolder
 
 
 
@@ -78,19 +81,21 @@ class CUIDragDropListWidget(QListWidget) :
             event.ignore()
     def dragMoveEvent(self, event) :
         event.acceptProposedAction()
-    def dropEvent(self, event):
+    def dropEvent(self, event) :
         if not event.mimeData().hasUrls() :
             event.ignore()
             return
         for url in event.mimeData().urls() :
             path = url.toLocalFile()
+            path = os.path.normpath(path)
             # 폴더 드롭 처리
             if os.path.isdir(path) :
-                for file in os.listdir(path):
-                    fullpath = os.path.join(path, file)
+                listFullPath = makeInputFolder.CFileOper.get_files_fullpath(path, self.m_tupleFileExt)
+                if listFullPath is None :
+                    continue
 
-                    if fullpath.lower().endswith(self.m_tupleFileExt) :
-                        self.add_file(fullpath)
+                for fullPath in listFullPath :
+                    self.add_file(fullPath)
             else :
                 if path.lower().endswith(self.m_tupleFileExt) :
                     self.add_file(path)

@@ -20,6 +20,7 @@ sys.path.append(fileCommonPipelinePath)
 
 
 import data as data
+import Block.makeInputFolder as makeInputFolder
 
 
 class CUserData :
@@ -123,13 +124,16 @@ class CUserData :
             if not os.path.exists(folderPath) :
                 os.makedirs(folderPath)
 
-            for fullPath in listFullPath :
-                lowerPath = fullPath.lower()
+            tmpPath = os.path.join(targetPath, "tmp")
+            if not os.path.exists(tmpPath) :
+                os.makedirs(tmpPath)
 
-                if lowerPath.endswith(".nii.gz") :
-                    shutil.copy(fullPath, folderPath)
-                elif lowerPath.endswith(".zip") :
-                    shutil.unpack_archive(fullPath, folderPath, "zip")
+            for fullPath in listFullPath :
+                shutil.copy(fullPath, tmpPath)
+            
+            makeInputFolder.CFileOper.unzip_in_folder(tmpPath)
+            makeInputFolder.CFileOper.copy_folder_ext(folderPath, tmpPath, ("nii.gz"))
+            makeInputFolder.CFileOper.remove_folder(tmpPath)
             
             self.__copy_child_folder_nifti(folderPath)
     

@@ -105,7 +105,6 @@ class CUserDataCommon(userData.CUserData) :
             datainst.PatientID = patientID
             datainst.OutputPath = self.m_outputTempPath
             self.MovingBlenderPath = self.MakeInputFolder.BlenderSavePath
-            
         else :
             datainst.PatientID = ""
             datainst.OutputPath = ""
@@ -114,6 +113,7 @@ class CUserDataCommon(userData.CUserData) :
         
         self._refresh_optioninfo()
     
+
     # override
     def override_changed_optioninfo(self) :
         if self.Data.OptionInfo is None :
@@ -231,9 +231,9 @@ class CUserDataCommon(userData.CUserData) :
         pass
 
 
-    # protected
-    def _refresh_optioninfo(self) :
-        if self.MakeInputFolder.Ready == False :
+    # protected 
+    def _refresh_optioninfo(self) : 
+        if self.MakeInputFolder.Ready == False : 
             return
         optioninfo = self.Data.OptionInfo
         if optioninfo is None :
@@ -250,13 +250,6 @@ class CUserDataCommon(userData.CUserData) :
 
         phaseMaskList = []
         for phase in phaseList :
-            # phaseFullPath = os.path.join(maskPath, phase)
-            # maskList = os.listdir(phaseFullPath)
-            # if len(maskList) == 0 :
-            #     continue
-
-            # maskList = [f.split('.')[0] for f in maskList]
-
             phaseFullPath = Path(maskPath) / phase
             if not phaseFullPath.is_dir() :
                 continue

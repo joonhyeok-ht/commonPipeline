@@ -13,6 +13,131 @@ import glob
 from pathlib import Path
 
 
+class CFileOper : 
+    @staticmethod
+    def rename_file(fullPath : str, rename : str) :
+        pass
+    @staticmethod
+    def get_files_fullpath(folderPath : str, extensions : tuple) -> list :
+        '''
+        ret 
+            - [fullPath0, fullPath1, ..]
+            - None : error or empty list
+        '''
+        target = Path(folderPath)
+        listFullPath = []
+
+        for file in target.rglob("*") :
+            if file.is_file() and file.name.lower().endswith(extensions) :
+                listFullPath.append(str(file))
+
+        if len(listFullPath) == 0 :
+            return None
+        return listFullPath
+
+    @staticmethod
+    def copy_file(targetPath : str, fullPath : str) :
+        target = Path(targetPath)
+        target.mkdir(parents=True, exist_ok=True)
+
+        src = Path(fullPath)
+        if not src.is_file() :
+            return
+
+        dst = target / src.name
+        shutil.copy2(src, dst)
+    @staticmethod
+    def copy_folder(targetPath : str, folderPath : str) :
+        '''
+        desc
+            - folderPath의 모든 내용을 targetPath로 복사 
+            - targetPath가 존재하지 않을 경우, 내부적으로 폴더를 생성한다. 
+        '''
+        target = Path(targetPath)
+        target.mkdir(parents=True, exist_ok=True)
+        shutil.copytree(folderPath, targetPath, dirs_exist_ok=True)
+    @staticmethod
+    def copy_folder_ext(targetPath : str, folderPath : str, extensions : tuple) :
+        '''
+        desc
+            - folderPath의 extensions 확장자들을 targetPath로 복사
+            - folderPath의 하위 folder들을 포함한다. 
+            - targetPath가 존재하지 않을 경우, 내부적으로 폴더를 생성한다. 
+        
+        input
+            - extensions : ("nii.gz", "zip")
+        '''
+        target = Path(targetPath)
+        target.mkdir(parents=True, exist_ok=True)
+
+        for file in Path(folderPath).rglob("*") :
+            if file.is_file() and file.name.lower().endswith(extensions) :
+                shutil.copy2(file, target / file.name)
+    
+    @staticmethod
+    def remove_file(fullPath : str) :
+        path = Path(fullPath)
+
+        if path.exists() and path.is_file() :
+            path.unlink()
+    @staticmethod
+    def remove_folder(folderPath : str) :
+        path = Path(folderPath)
+
+        if path.exists() and path.is_dir() :
+            shutil.rmtree(path)
+
+    @staticmethod
+    def unzip_file(targetPath : str, zipFullPath : str) :
+        '''
+        desc
+            - targetPath에는 폴더를 별도로 생성하지 않고 zip이 바로 풀림
+            - 따라서 targetPath의 특정 폴더에 zip이 풀리길 원한다면 targetPath에 해당 foler도 지정되어야 함 
+        '''
+        if os.path.exists(zipFullPath) == False :
+            return
+        target = Path(targetPath)
+        target.mkdir(parents=True, exist_ok=True)
+        shutil.unpack_archive(zipFullPath, targetPath, "zip")
+    @staticmethod
+    def zip_folder(targetPath : str, folderPath : str) -> str :
+        '''
+        ret : zip fullPath
+        '''
+        if os.path.exists(targetPath) == False :
+            return
+        if os.path.exists(folderPath) == False :
+            return
+        zipName = os.path.basename(folderPath)
+        zipName = os.path.join(targetPath, zipName)
+        shutil.make_archive(zipName, 'zip', folderPath)
+        return f"{zipName}.zip"
+    
+    @staticmethod
+    def unzip_in_folder(folderPath : str) :
+        '''
+        desc
+            - folderPath 내에 있는 모든 .zip의 압축을 같은 위치에서 푼다.
+            - 하위 폴더도 포함하여 검색한다. 
+        '''
+        if os.path.exists(folderPath) == False :
+            return
+        
+        root = Path(folderPath)
+
+        for zip_file in root.rglob("*.zip") :
+            if zip_file.is_file() :
+                extract_dir = zip_file.parent / zip_file.stem
+                extract_dir.mkdir(exist_ok=True)
+                shutil.unpack_archive(zip_file, extract_dir, "zip")
+
+
+    def __init__(self) :
+        pass
+    def clear(self) :
+        pass
+
+
 class CMakeInputFolder :
     TAG = "[MakeInputFolder] "
     s_dataRootName = "dataRoot"
@@ -92,11 +217,13 @@ class CMakeInputFolder :
 
         # dicom unzip
         dicomFullPath = os.path.join(self.m_zipPath, self.sZip_Dicom)
-        if os.path.exists(dicomFullPath) :
-            shutil.unpack_archive(dicomFullPath, self.m_dicomPath, "zip")
+        CFileOper.unzip_file(self.m_dicomPath, dicomFullPath)
 
         files = os.listdir(self.m_zipPath)
-        self.m_listPhaseZip = [file for file in files if file.endswith(".zip")]
+        self.m_listPhaseZip = [
+            file for file in files 
+            if file.endswith(".zip") and file != CMakeInputFolder.sZip_Dicom
+        ]
         if len(self.m_listPhaseZip) == 0 :
             print(self.TAG, "ERROR - not found zip files.")
             return False
@@ -105,10 +232,16 @@ class CMakeInputFolder :
 
         # create mask phase folder & unzip 
         for phase in self.m_listPhaseZipName :
-            phaseZipPath = os.path.join(self.m_zipPath, f"{phase}.zip")
-            shutil.unpack_archive(phaseZipPath, self.m_maskPath, "zip")
+            tmpTargetPath = os.path.join(self.m_zipPath, phase)
+            targetPath = os.path.join(self.m_maskPath, phase)
+            zipFullPath = os.path.join(self.m_zipPath, f"{phase}.zip")
+
+            CFileOper.unzip_file(tmpTargetPath, zipFullPath)    # 임시로 zip을 푼다 
+            CFileOper.copy_folder_ext(targetPath, tmpTargetPath, ("nii.gz"))    # 재귀적으로 돌면서 nifti 파일만 maskPath에 복사한다. 
+            CFileOper.remove_folder(tmpTargetPath)              # 임시 폴더를 삭제한다. 
             
-        # make mask zip 
+        # make mask zip
+        # zipFullPath = CFileOper.zip_folder(self.m_dataRootPath, self.m_maskPath)
         zipName = os.path.join(self.m_dataRootPath, f"{self.m_patientID}_mask_miop")
         shutil.make_archive(zipName, 'zip', self.m_maskPath)
 
@@ -116,22 +249,22 @@ class CMakeInputFolder :
         return True
     
     def copy_mask(self, copiedMaskPath : str) :
-        # mask copy 
-        if os.path.exists(copiedMaskPath) == False :
-            os.makedirs(copiedMaskPath, exist_ok=True)
-
         phaseList = self.m_listPhaseZipName
         for phase in phaseList :
             if phase == "" :
                 continue
-
             originMaskPhasePath = os.path.join(self.m_maskPath, phase)
             if os.path.exists(originMaskPhasePath) == False :
                 continue
 
-            for file in glob.glob(os.path.join(originMaskPhasePath, "*.nii.gz")):
-                shutil.copy(file, copiedMaskPath)
+            CFileOper.copy_folder_ext(copiedMaskPath, originMaskPhasePath, ("nii.gz"))
     def copy_target_mask(self, targetMaskFolder : str, individualPhase : str, copiedMaskPath : str) :
+        '''
+        - input
+            - targetMaskFolder : individual mask folder
+            - individualPhase : individual phase
+            - copiedMaskPaht : outTemp folder
+        '''
         if os.path.exists(copiedMaskPath) == False :
             os.makedirs(copiedMaskPath, exist_ok=True)
         
@@ -141,7 +274,6 @@ class CMakeInputFolder :
             for f in inputFolder.iterdir()
             if f.is_file() and f.name.lower().endswith(".nii.gz")
         ]
-        # maskNameList = [maskFile.split(".")[0] for maskFile in maskList]
 
         # 해당 mask file이 기존 phase 폴더에 있다면 지운다. 
         phaseList = self.m_listPhaseZipName
@@ -169,6 +301,7 @@ class CMakeInputFolder :
             shutil.copy(maskFullPath, originMaskPhasePath)
 
         # make mask zip 
+        # zipFullPath = CFileOper.zip_folder(self.m_dataRootPath, self.m_maskPath)
         zipName = os.path.join(self.m_dataRootPath, f"{self.m_patientID}_mask_miop")
         shutil.make_archive(zipName, 'zip', self.m_maskPath)
 
