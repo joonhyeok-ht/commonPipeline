@@ -272,7 +272,7 @@ class CTabStateCommonTerritory(tabState.CTabState) :
 
     # protected
     def _get_userdata(self) -> userDataCommon.CUserDataCommon :
-        return self.get_data().find_userdata(userDataCommon.CUserDataCommon.s_userDataKey)
+        return self.get_data().UserData
     
     
     # ui setting

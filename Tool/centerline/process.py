@@ -62,8 +62,6 @@ import command.commandInterface as commandInterface
 
 import state.tabState as tabState
 import state.tabStateSkelEdit as tabStateSkelEdit
-# import state.tabStateSkelLabeling as tabStateSkelEditLabeling
-# import state.tabStateTerritory as tabStateTerritory
 
 import operation as op
 
@@ -71,29 +69,22 @@ import data as data
 import clMask as clMask
 import vtkUIViewerCL as vtkUIViewerCL
 
-# user data
+# ui
+import ui.uiDragDrop as uiDragDrop
+
+
+# common project
 import state.project.common.tabStateMain as tabStateMain
 import state.project.common.tabStateCommonTerritory as tabStateCommonTerritory
 import state.project.common.tabStateVesselCutting as tabStateVesselCutting
 import state.project.common.tabStateVesselRemodeling as tabStateVesselRemodeling
-# import state.project.kidney.tabStateKidneySepTest as tabStateKidneySepTest
-# import state.project.colon.tabStateColonMain as tabStateColonMain
-# import state.project.colon.tabStateColonVesselCutting as tabStateColonVesselCutting
-# # import state.project.colon.tabStateColonMerge as tabStateColonMerge
-# import state.project.colon.tabStateColonMergeEn as tabStateColonMergeEn
-# import state.project.stomach.tabStateStomachVesselKnife as tabStateStomachVesselKnife
-# import state.project.stomach.tabStateStomachVesselLabeling as tabStateStomachVesselLabeling
-# import state.project.liver.tabStateLiverReg as tabStateLiverReg
-# import state.project.test.tabStateTerritoryEnhanced as tabStateTerritoryEnhanced
-# # import state.project.test.tabStateKnife as tabStateKnife
+# kidney-batch project
+import state.project.kidney_batch.tabStateKBMain as tabStateKBMain
 
+# user data
 import state.project.userData as userData
 import state.project.common.userDataCommon as userDataCommon
-# import state.project.stomach.userDataStomach as userDataStomach
-# import state.project.kidney.userDataKidney as userDataKidney
-# import state.project.lung.userDataLung as userDataLung
-# import state.project.liver.userDataLiver as userDataLiver
-# import state.project.colon.userDataColon as userDataColon
+import state.project.kidney_batch.userDataKB as userDataKB
 
 
 class COutputRedirector :
@@ -108,78 +99,25 @@ class COutputRedirector :
 
 
 class CTestApp(QMainWindow) :
-    # 일단 하드코딩 
     s_titleToken = "Recon Tool - "
     s_projectTypeInfo = {
         "Common" : {
             "TabInfo" : [
                 {"TabName" : "Patient Info", "TabInst" : tabStateMain.CTabStateMain},
                 {"TabName" : "Edit", "TabInst" : tabStateSkelEdit.CTabStateSkelEdit},
-                # {"TabName" : "Labeling", "TabInst" : tabStateSkelEditLabeling.CTabStateSkelLabeling},
-                # {"TabName" : "Territory", "TabInst" : tabStateTerritory.CTabStateTerritory},
-                # {"TabName" : "Territory Enhanced", "TabInst" : tabStateTerritoryEnhanced.CTabStateTerritoryEnhanced},
                 {"TabName" : "VesselRemodeling", "TabInst" : tabStateVesselRemodeling.CTabStateVesselRemodeling},
                 {"TabName" : "Labeling-Territory", "TabInst" : tabStateCommonTerritory.CTabStateCommonTerritory},
                 {"TabName" : "VesselCutting", "TabInst" : tabStateVesselCutting.CTabStateVesselCutting},
             ],
-            "UserDataKey" : userDataCommon.CUserDataCommon.s_userDataKey,
             "UserDataInst" : userDataCommon.CUserDataCommon
         },
-        # "Stomach" : {
-        #     "TabInfo" : [
-        #         {"TabName" : "Patient Info", "TabInst" : tabStateMain.CTabStateMain},
-        #         {"TabName" : "Edit", "TabInst" : tabStateSkelEdit.CTabStateSkelEdit},
-        #         {"TabName" : "Vessel Labeling", "TabInst" : tabStateStomachVesselLabeling.CTabStateStomachVesselLabeling},
-        #         {"TabName" : "Vessel Cutting", "TabInst" : tabStateStomachVesselKnife.CTabStateStomachVesselKnife},
-        #         {"TabName" : "Vessel Remodeling", "TabInst" : tabStateVesselRemodeling.CTabStateVesselRemodeling},
-        #     ],
-        #     "UserDataKey" : userDataStomach.CUserDataStomach.s_userDataKey,
-        #     "UserDataInst" : userDataStomach.CUserDataStomach
-        # },
-        # "Kidney" : {
-        #     "TabInfo" : [
-        #         {"TabName" : "Patient Info", "TabInst" : tabStateMain.CTabStateMain},
-        #         {"TabName" : "Edit", "TabInst" : tabStateSkelEdit.CTabStateSkelEdit},
-        #         {"TabName" : "Labeling", "TabInst" : tabStateSkelEditLabeling.CTabStateSkelLabeling},
-        #         {"TabName" : "Territory", "TabInst" : tabStateTerritory.CTabStateTerritory},
-        #         {"TabName" : "Kidney-Tumor Separation", "TabInst" : tabStateKidneySepTest.CTabStateKidneySepTest},
-        #     ],
-        #     "UserDataKey" : userDataKidney.CUserDataKidney.s_userDataKey,
-        #     "UserDataInst" : userDataKidney.CUserDataKidney
-        # },
-        # "Lung" : {
-        #     "TabInfo" : [
-        #         {"TabName" : "Patient Info", "TabInst" : tabStateMain.CTabStateMain},
-        #         {"TabName" : "Edit", "TabInst" : tabStateSkelEdit.CTabStateSkelEdit},
-        #         {"TabName" : "Labeling", "TabInst" : tabStateSkelEditLabeling.CTabStateSkelLabeling},
-        #         {"TabName" : "Territory", "TabInst" : tabStateTerritory.CTabStateTerritory},
-        #         {"TabName" : "VesselRemodeling", "TabInst" : tabStateVesselRemodeling.CTabStateVesselRemodeling},
-        #     ],
-        #     "UserDataKey" : userDataLung.CUserDataLung.s_userDataKey,
-        #     "UserDataInst" : userDataLung.CUserDataLung
-        # },
-        # "Liver" : {
-        #     "TabInfo" : [
-        #         {"TabName" : "Patient Info", "TabInst" : tabStateMain.CTabStateMain},
-        #         {"TabName" : "Edit", "TabInst" : tabStateSkelEdit.CTabStateSkelEdit},
-        #         {"TabName" : "Labeling", "TabInst" : tabStateSkelEditLabeling.CTabStateSkelLabeling},
-        #         {"TabName" : "Territory", "TabInst" : tabStateTerritoryEnhanced.CTabStateTerritoryEnhanced},
-        #         {"TabName" : "Registration Test", "TabInst" : tabStateLiverReg.CTabStateReg},
-        #     ],
-        #     "UserDataKey" : userDataLiver.CUserDataLiver.s_userDataKey,
-        #     "UserDataInst" : userDataLiver.CUserDataLiver
-        # },
-        # "Colon" : {
-        #     "TabInfo" : [
-        #         {"TabName" : "Patient Info", "TabInst" : tabStateColonMain.CTabStateColonMain},
-        #         {"TabName" : "Edit", "TabInst" : tabStateSkelEdit.CTabStateSkelEdit},
-        #         # {"TabName" : "Colon Merge", "TabInst" : tabStateColonMerge.CTabStateColonMerge},
-        #         {"TabName" : "Colon Merge En", "TabInst" : tabStateColonMergeEn.CTabStateColonMerge},
-        #         {"TabName" : "Vessel Cutting", "TabInst" : tabStateColonVesselCutting.CTabStateColonVesselCutting},
-        #     ],
-        #     "UserDataKey" : userDataColon.CUserDataColon.s_userDataKey,
-        #     "UserDataInst" : userDataColon.CUserDataColon
-        # },
+        "KidneyBatch" : {
+            "TabInfo" : [
+                {"TabName" : "Patient Info", "TabInst" : tabStateKBMain.CTabStateMain},
+                {"TabName" : "Edit", "TabInst" : tabStateSkelEdit.CTabStateSkelEdit},
+            ],
+            "UserDataInst" : userDataKB.CUserDataKB
+        },
     }
 
     def __init__(self, width : int, height : int) :
@@ -227,6 +165,7 @@ QPushButton {
         self.m_commonPipelinePath = fileCommonPipelinePath
 
         self.m_data = data.CData()
+        self.Data.UserData = CTestApp.s_projectTypeInfo[self.m_projectType]["UserDataInst"](self.Data, self)
         self.m_listUndoCmd = []
         self.m_listRedoCmd = []
 
@@ -381,6 +320,29 @@ QPushButton {
         for cb in retList :
             layout.addWidget(cb)
         return (layout, retList)
+    def create_layout_label_dropeditbox_btn(
+            self, 
+            title : str, bReadOnly : bool = False, btnTitle : str = "",
+            placeHolderText="Drop File Here", slotFunc=None
+            ) -> tuple :
+        '''
+        input
+            - slocFunc : slot_drop_path(fullPath : str)
+        ret : (QHBoxLayout, uiDragDrop.CUIDragDropLineEdit, QPushButton)
+        '''
+        layout = QHBoxLayout()
+        label = QLabel(title)
+        label.setStyleSheet("QLabel { margin-top: 1px; margin-bottom: 1px; }")
+        label.setSizePolicy(QSizePolicy.Policy.Minimum, QSizePolicy.Policy.Fixed)
+        editBox = uiDragDrop.CUIDragDropLineEdit(placeHolderText)
+        editBox.setReadOnly(bReadOnly)
+        editBox.signal_drop_path = slotFunc
+        btn = QPushButton(btnTitle)
+        btn.setStyleSheet(self.m_styleSheetBtn)
+        layout.addWidget(label)
+        layout.addWidget(editBox)
+        layout.addWidget(btn)
+        return (layout, editBox, btn)
 
     def add_cmd(self, cmd : commandInterface.CCommand) :
         self.m_listUndoCmd.append(cmd)
@@ -534,17 +496,6 @@ QPushButton {
             for obj in retList :
                 obj.Color = color
 
-    def load_userdata(self) :
-        # projectType에 따라 userData를 로딩해야 한다. 
-        self.Data.remove_all_userdata()
-        projectType = self.ProjectType
-        projectInfo = self.s_projectTypeInfo[projectType]
-        if projectInfo["UserDataKey"] == "" :
-            return
-        
-        userData = projectInfo["UserDataInst"](self.Data, self)
-        userData.load_patient()
-        self.Data.add_userdata(projectInfo["UserDataKey"], userData)
     def add_skeleton_obj(self, groupID : int) :
         dataInst = self.m_data
 
@@ -866,15 +817,7 @@ QPushButton {
     @property
     def Data(self) -> data.CData :
         return self.m_data
-    @property
-    def ReconUserData(self) -> userData.CUserData :
-        '''
-        warning : recon 용도외에 절대 사용하지 말 것 data에 있는 userData가 진짜임 
-        '''
-        projectType = self.ProjectType
-        userData = CTestApp.s_projectTypeInfo[projectType]["UserDataInst"](self.Data, self)
-        return userData
-
+    
 
     # protected
     def _init_layout_main_ui(self) :
@@ -961,6 +904,7 @@ QPushButton {
         self.get_tab_state(self.m_tabIndex).process()
     def _on_cb_projectType_changed(self, index) :
         self.m_projectType = self._getui_project_type()
+        self.Data.UserData = CTestApp.s_projectTypeInfo[self.m_projectType]["UserDataInst"](self.Data, self)
         self._init_tab()
 
 

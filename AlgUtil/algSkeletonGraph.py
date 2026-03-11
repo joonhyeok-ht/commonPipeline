@@ -716,14 +716,27 @@ class CSkeleton :
 
         for clID in listCLID :
             cl = self.get_centerline(clID)
-            flag = False
-            for ancestorCLID in listCLID :
-                if clID == ancestorCLID :
-                    continue
-                if self.is_ancestor(ancestorCLID, clID) == True :
-                    flag = True
-            if flag == False :
+
+            ret = self.get_conn_centerline_id(clID)
+            if ret is None :
+                continue
+
+            parentCLID = ret[0]
+            if parentCLID == -1 :
                 retList.append(cl)
+            elif parentCLID not in listCLID :
+                retList.append(cl)
+
+        # for clID in listCLID :
+        #     cl = self.get_centerline(clID)
+        #     flag = False
+        #     for ancestorCLID in listCLID :
+        #         if clID == ancestorCLID :
+        #             continue
+        #         if self.is_ancestor(ancestorCLID, clID) == True :
+        #             flag = True
+        #     if flag == False :
+        #         retList.append(cl)
 
         if len(retList) == 0 :
             return None

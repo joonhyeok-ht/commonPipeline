@@ -85,9 +85,9 @@ class CReconstruction(multiProcessTask.CMultiProcessTask) :
         
         if triCnt > 0 : 
             meshlib = CReconstruction.get_meshlib(polyData)
-            meshlib = algMeshLib.CMeshLib.meshlib_healing(meshlib)
+            meshlib = algMeshLib.CMeshLib.meshlib_healing(meshlib, bFill=False)
             meshlib = algMeshLib.CMeshLib.meshlib_decimation(meshlib, triCnt)
-            meshlib = algMeshLib.CMeshLib.meshlib_healing(meshlib)
+            meshlib = algMeshLib.CMeshLib.meshlib_healing(meshlib, bFill=False)
             polyData = CReconstruction.get_vtkmesh(meshlib)
         
         iCnt = len(listReconParam)

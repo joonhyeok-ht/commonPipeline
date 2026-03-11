@@ -96,8 +96,6 @@ class CSubStateCuttingLabel(subStateCutting.CSubStateCutting) :
                 self.m_mediator.m_comDragSelCLTP.command_reset_color()
             if self.m_mediator.m_comTreeVessel is not None :
                 self.m_mediator.m_comTreeVessel.command_clear_selection()
-            # if self.m_mediator.m_comVesselCutting is not None :
-            #     self.m_mediator.m_comVesselCutting.command_clear_selection()
         elif keyCode == "Delete" :
             self.m_mediator.m_editLabelName.setText("")
             if self.m_mediator.m_comDragSelCLTP is not None :

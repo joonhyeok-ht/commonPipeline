@@ -43,6 +43,7 @@ import Block.resampling as resamplingB
 import Block.reconstruction as reconstruction
 import Block.meshHealing as meshHealing
 import Block.meshBoolean as meshBoolean
+import Block.meshDecimation as meshDecimation
 
 import vtkObjInterface as vtkObjInterface
 
@@ -62,29 +63,12 @@ class CCommandReconDevelopCommon(commandRecon.CCommandRecon) :
     def __init__(self, mediator) :
         super().__init__(mediator)
         # input your code
-    def clear(self):
+    def clear(self) :
         # input your code
         super().clear()
     def process(self) :
         super().process()
         # input your code
-
-        # 기존 blender 파일이 있을 경우 로딩만 수행 
-        if os.path.exists(self.PatientBlenderFullPath) == True :
-            commandRecon.CCommandReconInterface.blender_process_load(self.OptionInfo.BlenderExe, self.PatientBlenderFullPath)
-            return
-
-        originMaskPath = self.MaskPath
-        if os.path.exists(originMaskPath) == False :
-            print(f"colon recon : not found mask path - {originMaskPath}")
-            return
-
-        copiedMaskPath = self.CopiedMaskPath
-        if os.path.exists(copiedMaskPath) == False :
-            os.makedirs(copiedMaskPath, exist_ok=True)
-            # nii.gz 파일 복사
-            for file in glob.glob(os.path.join(originMaskPath, "*.nii.gz")):
-                shutil.copy(file, copiedMaskPath)
         
         phase = None
 
@@ -103,7 +87,7 @@ class CCommandReconDevelopCommon(commandRecon.CCommandRecon) :
 
             registrationBlock = registration.CRegistration()
             registrationBlock.InputOptionInfo = self.InputData.OptionInfo
-            registrationBlock.InputMaskPath = self.CopiedMaskPath
+            registrationBlock.InputMaskPath = self.InputMaskPath
             registrationBlock.process()
 
             self._update_phase_offset(self.InputData.OptionInfo, registrationBlock, originOffsetBlock, phase)
@@ -115,46 +99,50 @@ class CCommandReconDevelopCommon(commandRecon.CCommandRecon) :
 
         resamplingToPhaseBlock = resamplingB.CResamplingToPhase()
         resamplingToPhaseBlock.InputOptionInfo = self.InputData.OptionInfo
-        resamplingToPhaseBlock.InputMaskPath = self.CopiedMaskPath
+        resamplingToPhaseBlock.InputMaskPath = self.InputMaskPath
         resamplingToPhaseBlock.InputPhase = phase
-        resamplingToPhaseBlock.OutputMaskPath = self.CopiedMaskPath
+        resamplingToPhaseBlock.OutputMaskPath = self.InputMaskPath
         resamplingToPhaseBlock.process()
 
         resamplingToMinSpacingBlock = resamplingB.CResamplingToMinSpacing()
-        resamplingToMinSpacingBlock.InputMaskPath = self.CopiedMaskPath
+        resamplingToMinSpacingBlock.InputMaskPath = self.InputMaskPath
         resamplingToMinSpacingBlock.InputOptionInfo = self.InputData.OptionInfo
-        resamplingToMinSpacingBlock.OutputMaskPath = self.CopiedMaskPath
+        resamplingToMinSpacingBlock.OutputMaskPath = self.InputMaskPath
         resamplingToMinSpacingBlock.process()
 
         removeStrictureBlock = removeStricture.CRemoveStricture()
         removeStrictureBlock.InputOptionInfo = self.OptionInfo
-        removeStrictureBlock.InputMaskPath = self.CopiedMaskPath
-        removeStrictureBlock.OutputMaskPath = self.CopiedMaskPath
+        removeStrictureBlock.InputMaskPath = self.InputMaskPath
+        removeStrictureBlock.OutputMaskPath = self.InputMaskPath
         removeStrictureBlock.process()
 
         reconstructionBlock = reconstruction.CReconstruction()
         reconstructionBlock.InputOptionInfo = self.InputData.OptionInfo
-        reconstructionBlock.InputMaskPath = self.CopiedMaskPath
+        reconstructionBlock.InputMaskPath = self.InputMaskPath
         reconstructionBlock.InputPhase = phase
-        reconstructionBlock.OutputPath = self.ResultPath
+        reconstructionBlock.OutputPath = self.OutputPath
         reconstructionBlock.process()
 
         meshHealingBlock = meshHealing.CMeshHealing()
-        meshHealingBlock.InputPath = self.ResultPath
+        meshHealingBlock.InputPath = self.OutputPath
         meshHealingBlock.InputOptionInfo = self.InputData.OptionInfo
         meshHealingBlock.process()
 
         meshBooleanBlock = meshBoolean.CMeshBoolean()
-        meshBooleanBlock.InputPath = self.ResultPath
+        meshBooleanBlock.InputPath = self.OutputPath
         meshBooleanBlock.InputOptionInfo = self.InputData.OptionInfo
         meshBooleanBlock.process()
+
+        meshDecimationBlok = meshDecimation.CMeshDecimation()
+        meshDecimationBlok.InputPath = self.OutputPath
+        meshDecimationBlok.InputOptionInfo = self.InputData.OptionInfo
+        meshDecimationBlok.process()
 
         removeStrictureBlock.clear()
         reconstructionBlock.clear()
         meshHealingBlock.clear()
         meshBooleanBlock.clear()
-
-        self._process_blender()
+        meshDecimationBlok.clear()
     def process_resampling(self) :
         originMaskPath = self.MaskPath
         if os.path.exists(originMaskPath) == False :
@@ -210,15 +198,6 @@ class CCommandReconDevelopCommon(commandRecon.CCommandRecon) :
 
 
     # protected
-    def _process_blender(self) :
-        blenderExe = self.OptionInfo.BlenderExe
-        scriptFullPath = self.InputBlenderScritpFullPath
-        inputPath = self.ResultPath
-        outputPath = self.InputData.OutputPatientPath
-
-        patientID = self.InputData.PatientID
-        saveName = f"{patientID}_recon"
-        commandRecon.CCommandReconInterface.blender_process(blenderExe, scriptFullPath, self.InputData.OptionInfo.m_jsonPath, inputPath, outputPath, saveName, False)
 
 
 # class CCommandReconDevelopCleanColon(commandRecon.CCommandReconDevelop) :

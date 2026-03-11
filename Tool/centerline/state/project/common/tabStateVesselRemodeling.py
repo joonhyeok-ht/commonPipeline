@@ -279,6 +279,11 @@ class CTabStateVesselRemodeling(tabState.CTabState) :
         if dataInst.Ready == False :
             return
         
+        clinfoInx = self.get_clinfo_index()
+        skeleton = dataInst.get_skeleton(clinfoInx)
+        if skeleton is None :
+            return
+        
         opSelectionCL = self.m_opSelectionCL
         opSelectionCL.process_reset()
 
@@ -1527,8 +1532,6 @@ class CTabStateVesselRemodeling(tabState.CTabState) :
 
         self.__refine_max_radius(srcSkeleton)
         # self.__refine_limit_radius(srcSkeleton, sphereRadius)
-
-        
 
 
     @property

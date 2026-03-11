@@ -85,6 +85,7 @@ class CMeshBoolean() :
                 print(f"Invalide Operator : {operator}")
                 continue
 
+            retMesh = algMeshLib.CMeshLib.meshlib_healing(retMesh, bFill=False)
             algMeshLib.CMeshLib.meshlib_save_stl(outStlFullPath, retMesh)
             print(f"completed boolean : {blenderName0} {operator} {blenderName1} --> {outBlenderName}")
 

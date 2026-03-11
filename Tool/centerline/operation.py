@@ -416,47 +416,7 @@ class COperationDragSelectionCLToggle(COperationDragSelectionCL) :
         # m_listSelectionKey에 selectionKey 추가 
         if len(listTmpSelectionKey) > 0 :
             self.m_listSelectionKey += listTmpSelectionKey
-    # def add_toggle_selection_keys(self, listSelectionKey: list) :
-    #     if not listSelectionKey :
-    #         return
-    #     # 1) 토글 대상 키들을 한 번에 수집 (원본 listSelectionKey는 건드리지 않음)
-    #     keys = list(listSelectionKey)
-    #     if self.ChildSelectionMode :
-    #         # list += 를 루프에서 반복하지 않고, extend로 누적
-    #         for key in listSelectionKey :
-    #             children = self._get_child_key(key)
-    #             if children :
-    #                 keys.extend(children)
-    #     # 2) 중복 키가 있을 경우를 대비: "홀수 번 등장한 키만" 최종 토글 대상으로 남김 (XOR)
-    #     toggle_set = set()
-    #     for k in keys :
-    #         if k in toggle_set :
-    #             toggle_set.remove(k)
-    #         else :
-    #             toggle_set.add(k)
-    #     if not toggle_set :
-    #         return
-    #     selected_set = set(self.m_listSelectionKey)
-    #     # 3) 원 코드처럼 listRet 순서를 최대한 유지하기 위해, encounter order로 리스트를 만듦
-    #     unselect_keys = []
-    #     select_keys = []
-    #     seen = set()
-    #     for k in keys :
-    #         if k in toggle_set and k not in seen :
-    #             seen.add(k)
-    #             if k in selected_set :
-    #                 unselect_keys.append(k)
-    #             else:
-    #                 select_keys.append(k)
-    #     # 4) 원 코드 동작 유지: unSelectionKey는 append 누적
-    #     if unselect_keys :
-    #         self.m_listUnSelectionKey.extend(unselect_keys)
-    #         set_unselect = set(unselect_keys)
-    #         # m_listSelectionKey에서 제거 (O(M))
-    #         self.m_listSelectionKey = [k for k in self.m_listSelectionKey if k not in set_unselect]
-    #     # 5) 선택 추가는 뒤에 붙임(원 코드와 동일)
-    #     if select_keys :
-    #         self.m_listSelectionKey.extend(select_keys)
+
     
 
 if __name__ == '__main__' :

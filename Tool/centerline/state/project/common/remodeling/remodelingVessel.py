@@ -4,18 +4,10 @@ import numpy as np
 import shutil
 import subprocess
 import math
+import json
 
 
-from scipy import ndimage
 from scipy.spatial import KDTree
-from scipy.spatial import Delaunay
-from scipy.ndimage import maximum_filter
-from scipy.interpolate import interp1d
-from scipy.ndimage import gaussian_filter
-from scipy.ndimage import gaussian_filter1d
-
-import SimpleITK as sitk
-import matplotlib.pyplot as plt
 
 import vtk
 import vtkmodules.vtkInteractionStyle
@@ -234,22 +226,46 @@ class CResampledFrameCL(curveInfo.CCLCurve) :
 
         self.m_resampledVertex = []
         self.m_resampledRadius = []
-        self.m_resampledTangent = []
-        self.m_resampledNormal = []
-        self.m_resampledBinormal = []
+        self.m_resampledTangent = None
+        self.m_resampledNormal = None
+        self.m_resampledBinormal = None
+
         for resampledInx in self.m_resampleIndex :
             self.m_resampledVertex.append(self.m_point[resampledInx])
             self.m_resampledRadius.append(self.m_radius[resampledInx])
-            self.m_resampledTangent.append(self.m_tangent[resampledInx])
-            self.m_resampledNormal.append(self.m_normal[resampledInx])
-            self.m_resampledBinormal.append(self.m_binormal[resampledInx])
+        
         self.m_resampledVertex = np.array(self.m_resampledVertex)
         self.m_resampledRadius = np.array(self.m_resampledRadius)
-        self.m_resampledTangent = np.array(self.m_resampledTangent)
-        self.m_resampledNormal = np.array(self.m_resampledNormal)
-        self.m_resampledBinormal = np.array(self.m_resampledBinormal)
+        self.m_resampledBinormal, self.m_resampledNormal, self.m_resampledTangent = curveInfo.CCLCurve.get_BNT(self.m_resampledVertex, None, None, None)
 
+    def save_resampling_data(self, jsonFullPath : str) :
+        if self.m_resampledRadius is None :
+            return
+        
+        dic = {}
+        dic["centerline"] = self.m_resampledVertex.tolist()
+        dic["radius"] = self.m_resampledRadius.tolist()
+        dic["binormal"] = self.m_resampledBinormal.tolist()
+        dic["normal"] = self.m_resampledNormal.tolist()
 
+        with open(jsonFullPath, "w", encoding="utf-8") as fp:
+            json.dump(dic, fp, ensure_ascii=False, indent=4)
+    def load_resampling_data(self, jsonFullPath : str) -> tuple :
+        '''
+        ret : (vertex, radius, binormal, normal)
+        '''
+        if os.path.exists(jsonFullPath) == False :
+            print(f"not found {jsonFullPath}")
+            return None
+
+        dic = None
+        with open(jsonFullPath, 'r') as fp :
+            dic = json.load(fp)
+        npVertex = np.array(dic["centerline"], dtype=np.float32)
+        npRadius = np.array(dic["radius"], dtype=np.float32)
+        npBiNormal = np.array(dic["binormal"], dtype=np.float32)
+        npNormal = np.array(dic["normal"], dtype=np.float32)
+        return (npVertex, npRadius, npBiNormal, npNormal)
     def create_cylinder_polydata(self, resolution : int = 16) -> vtk.vtkPolyData :
         """
         points : (N, 3) numpy array
@@ -495,12 +511,6 @@ class CTreeVesselRemodeling :
 
         return newPts, newRadius  
     @staticmethod
-    def smooth_centerline(vertices: np.ndarray, sigma: float = 1.0) -> np.ndarray:
-        smoothed = vertices.copy()
-        for i in range(3):
-            smoothed[:, i] = gaussian_filter1d(vertices[:, i], sigma=sigma)
-        return smoothed  
-    @staticmethod
     def bridge_mesh(A : vtk.vtkPolyData, B : vtk.vtkPolyData) -> vtk.vtkPolyData :
         meshA = CTreeVesselRemodeling.get_meshlib(A)
         meshB = CTreeVesselRemodeling.get_meshlib(B)
@@ -634,6 +644,8 @@ class CTreeVesselRemodeling :
                 node.ResampledVertex = resampledCL.ResampledVertex
                 node.ResampledRadius = resampledCL.ResampledRadius
                 node.PolyData = resampledCL.create_cylinder_polydata()
+
+                # resampledCL.save_resampling_data("/Users/hutom/Desktop/solution/project/anaconda/Solution/Test2/0013_remodeling_vessel/resampling.json")
 
                 if self.m_listResampleVertex is None :
                     self.m_listResampleVertex = node.ResampledVertex.copy()

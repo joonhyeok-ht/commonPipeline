@@ -99,7 +99,7 @@ class CComAutoCutting(componentSelectionCL.CComDrag) :
         if self.ready() == False :
             return False
         
-        # invalidate list에서 선택된 node가 없다면 무시한다. d
+        # invalidate list에서 선택된 node가 없다면 무시한다. 
         selectedNode = self._getui_list_selected_node()
         if selectedNode is None :
             return False
@@ -107,19 +107,19 @@ class CComAutoCutting(componentSelectionCL.CComDrag) :
         super().click(clickX, clickY)
         
         dataInst = self._get_data()
-        worldStart, pNearStart, pFarStart= self.App.get_world_from_mouse(self.m_startX, self.m_startY, CComVesselCutting.s_pickingDepth)
-        worldEnd, pNearEnd, pFarEnd = self.App.get_world_from_mouse(self.m_endX, self.m_endY, CComVesselCutting.s_pickingDepth)
+        worldStart, pNearStart, pFarStart= self.App.get_world_from_mouse(self.m_startX, self.m_startY, CComAutoCutting.s_pickingDepth)
+        worldEnd, pNearEnd, pFarEnd = self.App.get_world_from_mouse(self.m_endX, self.m_endY, CComAutoCutting.s_pickingDepth)
 
-        self.m_knifeKey = data.CData.make_key(CComVesselCutting.s_knifeKeyType, 0, 0)
+        self.m_knifeKey = data.CData.make_key(CComAutoCutting.s_knifeKeyType, 0, 0)
         inst = vtkObjLine.CVTKObjLine()
-        inst.KeyType = CComVesselCutting.s_knifeKeyType
+        inst.KeyType = CComAutoCutting.s_knifeKeyType
         inst.Key = self.m_knifeKey
         inst.set_line_width(2.0)
         inst.set_pos(pFarStart, pFarEnd)
         inst.Color = algLinearMath.CScoMath.to_vec3([1.0, 0.0, 0.0])
         dataInst.add_vtk_obj(inst)
 
-        self.App.ref_key_type(CComVesselCutting.s_knifeKeyType)
+        self.App.ref_key_type(CComAutoCutting.s_knifeKeyType)
 
         self.m_bDrag = True
         return True
@@ -133,13 +133,13 @@ class CComAutoCutting(componentSelectionCL.CComDrag) :
         if self.Drag == False :
             return False
         
-        self.App.remove_key_type(CComVesselCutting.s_knifeKeyType)
+        self.App.remove_key_type(CComAutoCutting.s_knifeKeyType)
 
         # drag 영역이 너무 작을 경우 무시
         dx = self.m_endX - self.m_startX
         dy = self.m_endY - self.m_startY
         dist = math.hypot(dx, dy)
-        if dist < CComVesselCutting.s_minDragDist :
+        if dist < CComAutoCutting.s_minDragDist :
             return False
 
         self._command_knife_vessel(self.m_startX, self.m_startY, self.m_endX, self.m_endY)
@@ -155,8 +155,8 @@ class CComAutoCutting(componentSelectionCL.CComDrag) :
         super().move(clickX, clickY, listExceptKeyType)
 
         dataInst = self._get_data()
-        worldStart, pNearStart, pFarStart = self.App.get_world_from_mouse(self.m_startX, self.m_startY, CComVesselCutting.s_pickingDepth)
-        worldEnd, pNearEnd, pFarEnd = self.App.get_world_from_mouse(self.m_endX, self.m_endY, CComVesselCutting.s_pickingDepth)
+        worldStart, pNearStart, pFarStart = self.App.get_world_from_mouse(self.m_startX, self.m_startY, CComAutoCutting.s_pickingDepth)
+        worldEnd, pNearEnd, pFarEnd = self.App.get_world_from_mouse(self.m_endX, self.m_endY, CComAutoCutting.s_pickingDepth)
         inst = dataInst.find_obj_by_key(self.m_knifeKey)
         inst.set_pos(pFarStart, pFarEnd)
  
@@ -185,6 +185,8 @@ class CComAutoCutting(componentSelectionCL.CComDrag) :
         vesselKey = self._get_invalid_key()
         self.App.remove_key(vesselKey)
 
+        if node is None :
+            return
         wholeVessel = node.get_whole_vessel()
         if wholeVessel is None :
             print("not found wholeVessel")
@@ -208,28 +210,15 @@ class CComAutoCutting(componentSelectionCL.CComDrag) :
         
         item = selectedItems[0]
         text = item.text()
-        node = item.data(Qt.UserRole) 
-        
+        node = item.data(Qt.UserRole)      
         return node
     
-    def _setui_list_add_node(self, node : treeVessel.CNodeVesselHier) :
+    def _setui_list_add_node(self, name : str, node : treeVessel.CNodeVesselHier) :
         self.InputUILVInvalidVessel.blockSignals(True)
 
-        clLabel = self.InputTreeVessel.get_cl_label(node)
-        item = QListWidgetItem(f"{clLabel}")
+        item = QListWidgetItem(f"{name}")
         item.setData(Qt.UserRole, node)
         self.InputUILVInvalidVessel.addItem(item)
-
-        self.InputUILVInvalidVessel.blockSignals(False)
-    def _setui_list_add_listnode(self, listNode : list) :
-        self.InputUILVInvalidVessel.blockSignals(True)
-        self.InputUILVInvalidVessel.clear()
-
-        for node in listNode :
-            clLabel = self.InputTreeVessel.get_cl_label(node)
-            item = QListWidgetItem(f"{clLabel}")
-            item.setData(Qt.UserRole, node)
-            self.InputUILVInvalidVessel.addItem(item)
 
         self.InputUILVInvalidVessel.blockSignals(False)
     def _setui_list_remove_node(self, targetNode : treeVessel.CNodeVesselHier) :
@@ -289,6 +278,7 @@ class CComAutoCutting(componentSelectionCL.CComDrag) :
             node.Vessel = sub
 
         self._setui_list_remove_node(node)
+        self._visible_node(None)
         if self.signal_finished_knife is not None :
             self.signal_finished_knife(node)
 
@@ -299,8 +289,8 @@ class CComAutoCutting(componentSelectionCL.CComDrag) :
         if node is None :
             print("not found node")
             return
+        self._visible_node(node)
         if self.signal_invalid_node is not None :
-            self._visible_node(node)
             self.signal_invalid_node(node)
     
 
@@ -365,7 +355,8 @@ class CComAutoCuttingTree(CComAutoCutting) :
         cmd.process()
 
         if cmd.OutputWhole is None or cmd.OutputSub is None :
-            self._setui_list_add_node(node)
+            clLabel = self.m_treeVessel.get_cl_label(node)
+            self._setui_list_add_node(clLabel, node)
         else :
             node.set_whole_vessel(cmd.OutputWhole)
             node.Vessel = cmd.OutputSub

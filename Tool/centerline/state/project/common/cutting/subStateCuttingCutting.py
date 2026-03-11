@@ -155,7 +155,7 @@ class CSubStateCuttingCutting(subStateCutting.CSubStateCutting) :
             self.m_state = 1
     
 
-    def slot_finished_knife(self) :
+    def slot_finished_knife(self, node : treeVessel.CNodeVesselHier) :
         if self.m_state == 1 :
             return
         
