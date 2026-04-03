@@ -788,7 +788,6 @@ class CTabStateVesselRemodeling(tabState.CTabState) :
             mergedMesh = CTabStateVesselRemodeling.get_vtkmesh(meshlib)
 
         cmd = commandRemodeling.CCommandRemodelingAdd(self)
-        # cmd.InputAnchorNode = anchorNode
         cmd.InputAnchorNode = self.m_mainNode
         cmd.InputRemodelingMesh = mergedMesh
         bRet = cmd.process()

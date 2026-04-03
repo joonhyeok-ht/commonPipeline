@@ -617,16 +617,18 @@ class CTabStateMain(tabState.CTabState) :
             return
         self.command_centerline()
     def _on_btn_clean(self) :
-        if self.getui_patientID() == "" :
+        if self.getui_edit_huid_path() == "" :
             print("not selection patientID")
             return
-        if self.getui_output_path() == "" :
+        if self.getui_edit_outtemp_path() == "" :
             print("not setting output path")
             return 
         
-        userData = self.m_mediator.ReconUserData
-        if userData is not None :
-            userData.override_clean()
+        datainst = self.get_data()
+        userdata = datainst.UserData
+        if userdata is not None :
+            blenderFullPath = userdata.OutputReconBlenderFullPath 
+            userdata.override_clean(blenderFullPath)
     def _on_tv_clicked_clinfo(self, index) :
         dataInst = self.get_data()
         if dataInst.Ready == False :

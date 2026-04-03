@@ -46,27 +46,6 @@ class CCommandExportInterface(commandInterface.CCommand) :
         super().process()
         # input your code
 
-
-    def export_from_blender(self, scriptFullPath : str, tmpStr : str, outExportPath : str) :
-        with open(scriptFullPath, 'w') as scriptFp:
-            scriptFp.write(f""" 
-import bpy
-import os
-listObjName = [{tmpStr}]
-outputPath = r'{outExportPath}'
-for objName in listObjName :
-    if objName in bpy.data.objects:
-        bpy.ops.object.mode_set(mode='OBJECT')
-        bpy.ops.object.select_all(action='DESELECT')
-        bpy.data.objects[objName].select_set(True)
-        bpy.context.view_layer.objects.active = bpy.data.objects[objName]
-        bpy.ops.export_mesh.stl(filepath=os.path.join(outputPath, objName + '.stl'), use_selection=True)
-                """)
-
-        cmd = f"{self.OptionInfo.BlenderExe} -b {self.PatientBlenderFullPath} --python {scriptFullPath}"
-        os.system(cmd)
-
-
 class CCommandExportList(CCommandExportInterface) :
     def __init__(self, mediator) :
         super().__init__(mediator)
@@ -89,23 +68,15 @@ class CCommandExportList(CCommandExportInterface) :
         if iCnt == 0 :
             return
         
-        tmpStr = f"'{self.m_listBlenderName[0]}'"
-        if iCnt > 1 :
-            for inx in range(1, iCnt) :
-                blenderName = self.m_listBlenderName[inx]
-                tmpStr = self.__attach_str(tmpStr, blenderName)
-        scriptFullPath = os.path.join(self.OutputPath, f"tmpScript.py")
-        self.export_from_blender(scriptFullPath, tmpStr, self.OutputPath)
+        userdata = self.InputData.UserData
+        if userdata is None :
+            return
+        
+        blenderFullPath = self.PatientBlenderFullPath
+        userdata.blender_exporter(blenderFullPath, self.m_listBlenderName, self.OutputPath)
 
     def add_blender_name(self, blenderName) :
         self.m_listBlenderName.append(blenderName)
-
-
-    # private
-    def __attach_str(self, target : str, src : str) -> str :
-        tmpStr = f", '{src}'"
-        target += tmpStr
-        return target
 
 
     @property

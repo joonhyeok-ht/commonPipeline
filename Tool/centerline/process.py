@@ -113,7 +113,7 @@ class CTestApp(QMainWindow) :
         },
         "KidneyBatch" : {
             "TabInfo" : [
-                {"TabName" : "Patient Info", "TabInst" : tabStateKBMain.CTabStateMain},
+                {"TabName" : "Patient Info", "TabInst" : tabStateKBMain.CTabStateKBMain},
                 {"TabName" : "Edit", "TabInst" : tabStateSkelEdit.CTabStateSkelEdit},
             ],
             "UserDataInst" : userDataKB.CUserDataKB
@@ -863,8 +863,14 @@ QPushButton {
         self.UIViewerCL.set_background(algLinearMath.CScoMath.to_vec3([0.5, 0.5, 0.5]))
         self.UIViewerCL.start()
     def _init_tab(self) :
+        if self.m_tabIndex >= 0 :
+            self.get_tab_state(self.m_tabIndex).process_end()
+
+        self.m_mainTab.blockSignals(True)
         while self.m_mainTab.count() > 0 :
             self.m_mainTab.removeTab(0)
+        self.m_mainTab.blockSignals(False)
+
         self.m_tabIndex = -1
         self.m_listTabState.clear()
 
@@ -875,12 +881,22 @@ QPushButton {
         
         projectInfo = self.s_projectTypeInfo[projectType]
         tabInfo = projectInfo["TabInfo"]
+
+        self.m_mainTab.blockSignals(True)
         for ele in tabInfo :
             tabName = ele["TabName"]
             inst = ele["TabInst"](self)
             self.m_listTabState.append(inst)
             self.m_mainTab.addTab(inst.Tab, tabName)
-        
+        self.m_mainTab.blockSignals(False)
+
+        self.Data.clear()
+        self.Data.UserData = CTestApp.s_projectTypeInfo[self.m_projectType]["UserDataInst"](self.Data, self)
+
+        self.m_tabIndex = 0
+        self.get_tab_state(self.m_tabIndex).process_init()
+        self.get_tab_state(self.m_tabIndex).process()
+
         iCnt = self.get_tab_state_count()
         for inx in range(0, iCnt) :
             self.get_tab_state(inx).changed_project_type()
@@ -898,13 +914,16 @@ QPushButton {
     def _on_tab_changed(self, inx) :
         if self.m_tabIndex == inx :
             return
-        self.get_tab_state(self.m_tabIndex).process_end()
+        if self.m_tabIndex >= 0 :
+            self.get_tab_state(self.m_tabIndex).process_end()
+
         self.m_tabIndex = inx
-        self.get_tab_state(self.m_tabIndex).process_init()
-        self.get_tab_state(self.m_tabIndex).process()
+
+        if self.m_tabIndex >= 0 :
+            self.get_tab_state(self.m_tabIndex).process_init()
+            self.get_tab_state(self.m_tabIndex).process()
     def _on_cb_projectType_changed(self, index) :
         self.m_projectType = self._getui_project_type()
-        self.Data.UserData = CTestApp.s_projectTypeInfo[self.m_projectType]["UserDataInst"](self.Data, self)
         self._init_tab()
 
 

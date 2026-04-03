@@ -116,6 +116,8 @@ class CUserDataCommon(userData.CUserData) :
 
     # override
     def override_changed_optioninfo(self) :
+        super().override_changed_optioninfo()
+
         if self.Data.OptionInfo is None :
             optioninfoPath = ""
         else :
@@ -123,9 +125,9 @@ class CUserDataCommon(userData.CUserData) :
 
         self.m_resPath = os.path.join(optioninfoPath, "Res")
         self.m_scriptPath = os.path.join(self.m_resPath, "common")
-        self.m_reconScriptFullPath = os.path.join(self.m_scriptPath, "blenderScriptRecon.py")
-        self.m_individualReconScriptFullPath = os.path.join(self.m_scriptPath, "blenderScriptIndRecon.py")
-        self.m_cleanScriptFullPath = os.path.join(self.m_scriptPath, "blenderScriptClean.py")
+        self.m_reconScriptFullPath = os.path.join(self.m_scriptPath, "bspRecon.py")
+        self.m_individualReconScriptFullPath = os.path.join(self.m_scriptPath, "bspIndRecon.py")
+        self.m_cleanScriptFullPath = os.path.join(self.m_scriptPath, "bsmClean.py")
 
         self.MakeInputFolder.clear()
 
@@ -137,21 +139,20 @@ class CUserDataCommon(userData.CUserData) :
         self.m_outputReconBlenderFullPath = ""
         self.m_outputCleanBlenderFullPath = ""
     def override_recon(self) :
-        # 기존에 존재할 경우 blender 로딩만 수행 
-        if os.path.exists(self.m_outputReconBlenderFullPath) == True :
-            userData.CUserData.blender_process_load(self.Data.OptionInfo.BlenderExe, self.m_outputReconBlenderFullPath)
-            return
-        
         datainst = self.Data
         optioninfo = datainst.OptionInfo
         folderinfo = self.MakeInputFolder
+
+        # 기존에 존재할 경우 blender 로딩만 수행 
+        if os.path.exists(self.OutputReconBlenderFullPath) == True :
+            self.blender_process(self.OutputReconBlenderFullPath, None, None, False)
+            return
 
         # dataRoot의 Mask를 OutTemp로 복사
         copiedMaskPath = os.path.join(datainst.OutputPatientPath, "Mask")
         if os.path.exists(self.OutputReconBlenderFullPath) == False :
             folderinfo.copy_mask(copiedMaskPath)
         reconStlPath = os.path.join(datainst.OutputPatientPath, "Result")
-        blendSavePath = datainst.OutputPatientPath
 
         # recon 수행 
         cmd = commandReconCommon.CCommandReconDevelopCommon(self.m_mediator)
@@ -161,11 +162,19 @@ class CUserDataCommon(userData.CUserData) :
         cmd.process()
 
         # blender 수행 
-        blenderExe = optioninfo.BlenderExe
+        # param 설정 
+        '''
+        param
+            - "InputPath"       : import 할 mesh file들이 있는 folder  
+            - "SaveFullPath"    : 저장 할 blend 파일명의 전체 경로
+        '''
+        dicParam = {
+            "InputPath" : reconStlPath,
+            "SaveFullPath" : self.m_localReconBlenderFullPath
+        }
         scriptFullPath = self.m_reconScriptFullPath
-        saveName = os.path.basename(self.m_localReconBlenderFullPath)
-        saveName = saveName.split('.')[0]
-        userData.CUserData.blender_process(blenderExe, scriptFullPath, optioninfo.m_jsonPath, reconStlPath, blendSavePath, saveName, False)
+        optionFullPath = self._blender_script_param(dicParam)
+        self.blender_process(None, scriptFullPath, optionFullPath, False)
 
         # save blender folder로 move 
         if self.m_movingBlenderPath != "" :
@@ -191,7 +200,6 @@ class CUserDataCommon(userData.CUserData) :
 
         self._refresh_optioninfo()
         reconStlPath = os.path.join(datainst.OutputPatientPath, "IndividualResult")
-        blendSavePath = os.path.dirname(self.OutputReconBlenderFullPath)
 
         cmd = commandReconCommon.CCommandReconDevelopCommon(self.m_mediator)
         cmd.InputData = self.Data
@@ -200,33 +208,68 @@ class CUserDataCommon(userData.CUserData) :
         cmd.process()
 
         # blender 수행 
-        blenderExe = optioninfo.BlenderExe
+        # param 설정 
+        '''
+        param
+            - "InputPath"       : import 할 mesh file들이 있는 folder  
+        '''
+        dicParam = {
+            "InputPath" : reconStlPath
+        }
         scriptFullPath = self.m_individualReconScriptFullPath
-        saveName = os.path.basename(self.OutputReconBlenderFullPath)
-        saveName = saveName.split('.')[0]
-        userData.CUserData.blender_process_load_script(blenderExe, self.OutputReconBlenderFullPath, scriptFullPath, optioninfo.m_jsonPath, reconStlPath, blendSavePath, saveName, False)
-        
-        # remove input, output folders
+        optionFullPath = self._blender_script_param(dicParam)
+        self.blender_process(self.OutputReconBlenderFullPath, scriptFullPath, optionFullPath, False)
+
+        # clear
         if os.path.exists(copiedMaskPath) == True :
             shutil.rmtree(copiedMaskPath)
         if os.path.exists(reconStlPath) == True :
             shutil.rmtree(reconStlPath)
-    def override_clean(self) :
-        pass
-        # # 기존것은 지움
-        # if os.path.exists(self.m_outputCleanBlenderFullPath) == True :
-        #     os.remove(self.m_outputCleanBlenderFullPath)
-        # # 새롭게 생성 
-        # shutil.copy(self.m_outputReconBlenderFullPath, self.m_localCleanBlenderFullPath)
+    def override_clean(self, blenderFullPath : str) :
+        if os.path.exists(blenderFullPath) == False :
+            return
+        
+        datainst = self.Data
+        optioninfo = datainst.OptionInfo
 
-        # cmd = commandRecon.CCommandReconDevelopClean(self.m_mediator)
-        # cmd.InputData = self.Data
-        # cmd.InputBlenderScritpFullPath = self.m_cleanScriptFullPath
-        # cmd.PatientBlenderFullPath = self.m_localCleanBlenderFullPath
-        # cmd.process()
+        # 원본 blender는 복사 후 rename 
+        shutil.copy2(blenderFullPath, self.OutputCleanBlenderFullPath)
+        blenderFullPath = self.OutputCleanBlenderFullPath
 
-        # if self.m_movingBlenderPath != "" :
-        #     shutil.move(self.m_localCleanBlenderFullPath, self.m_movingBlenderPath)
+        # blender 파일에 대해 import 수행 
+        listStlPath = self._find_stl_path_from_out(datainst.OutputPatientPath)
+        if len(listStlPath) > 0 :
+            '''
+            param
+                - "StlPath"         : stl 파일들이 저장되어 있는 folder path, 없다면 "" 또는 None을 입력 
+                - "ListStlFullPath  : stl파일들의 전체 경로를 저장한 list, 없다면 None을 입력 
+            
+            desc 
+                - 기존 내용에 추가적으로 stl 파일들을 import 한다. 
+            '''
+            dicParam = {
+                "StlPath" : None,
+                "ListStlFullPath" : listStlPath
+            }
+            scriptPath = os.path.join(self.ResPath, "common")
+            scriptFullPath = os.path.join(scriptPath, "bsmImportStl.py")
+            optionFullPath = self._blender_script_param(dicParam)
+            self.blender_process(blenderFullPath, scriptFullPath, optionFullPath, True)
+        
+        # blender 파일에 대해 clean 수행  
+        # param 설정 
+        '''
+        param
+            - "ListMeshName"    : clean-up 할 mesh name, None or 원소가 없다면 전체를 clean-up 한다.
+            - "SaveFullPath"    : 저장 할 blend 파일명의 전체 경로, None or "" 라면 덮어쓴다. 
+        '''
+        dicParam = {
+            "ListMeshName" : None,
+            "SaveFullPath" : None
+        }
+        scriptFullPath = self.m_cleanScriptFullPath
+        optionFullPath = self._blender_script_param(dicParam)
+        self.blender_process(blenderFullPath, scriptFullPath, optionFullPath, False)
     def override_load_centerline(self) :
         pass
 
@@ -238,53 +281,22 @@ class CUserDataCommon(userData.CUserData) :
         optioninfo = self.Data.OptionInfo
         if optioninfo is None :
             return
+        
         folderInfo = self.MakeInputFolder
+        maskPath = folderInfo.MaskPath
+        self._collecting_collect_mask_phase(maskPath)
 
         dataRootPath = self.MakeInputFolder.DataRootPath
+        optioninfo.reload()
         optioninfo.DataRootPath = dataRootPath
         
-        
-        maskPath = folderInfo.MaskPath
-        p = Path(maskPath)
-        phaseList = [f.name for f in p.iterdir() if f.is_dir()]
-
-        phaseMaskList = []
-        for phase in phaseList :
-            phaseFullPath = Path(maskPath) / phase
-            if not phaseFullPath.is_dir() :
-                continue
-
-            maskList = [
-                f.name[:-7]
-                for f in phaseFullPath.iterdir()
-                if f.is_file() and f.name.endswith(".nii.gz")
-            ]
-
-            if not maskList :
-                continue
-
-            phaseMaskList.append({'phase': phase, 'files': maskList})
-
-        '''
-        key : maskName
-        value : phase
-        '''
-        dicMaskPhase = {}
-        for maskinfo in phaseMaskList :
-            phase = maskinfo['phase']
-            listMask = maskinfo['files']
-            for maskName in listMask :
-                dicMaskPhase[maskName] = phase
-
         # optioninfo mask의 phase refresh
         iCnt = optioninfo.get_recon_count()
         for reconInx in range(0, iCnt) :
             listCnt = optioninfo.get_recon_list_count(reconInx)
             for listInx in range(0, listCnt) :
                 maskName, _, _, _ = optioninfo.get_recon_list(reconInx, listInx)
-                phase = ""
-                if maskName in dicMaskPhase :
-                    phase = dicMaskPhase[maskName]
+                phase = self._collecting_search_phase_of_maskname(maskName)
                 optioninfo.set_recon_phase(maskName, phase)
 
         self._post_refresh_optioninfo()

@@ -43,6 +43,7 @@ import Block.resampling as resamplingB
 import Block.reconstruction as reconstruction
 import Block.meshHealing as meshHealing
 import Block.meshBoolean as meshBoolean
+import Block.meshDecimation as meshDecimation
 
 import vtkObjInterface as vtkObjInterface
 
@@ -51,8 +52,9 @@ import data as data
 import userData as userData
 
 import command.commandRecon as commandRecon
-import createDiaphragm as createDiaphragm
-# import convertMaskPhase as convertMaskPhase
+
+import kbBlock.createDiaphragm as createDiaphragm
+import kbBlock.sepKidneyTumor as kbSepKidney
 
 
 
@@ -63,17 +65,29 @@ class CCommandReconDevelopKidneyBatch(commandRecon.CCommandRecon) :
     def __init__(self, mediator) :
         super().__init__(mediator)
         # input your code
+        self.m_anchorKidneyName = ""
+        self.m_outputKidneyName = ""
+        self.m_listExoName = []
     def clear(self) :
         # input your code
+        self.m_anchorKidneyName = ""
+        self.m_outputKidneyName = ""
+        self.m_listExoName.clear()
         super().clear()
     def process(self) :
         super().process()
 
-        # input your code
+        if self.AnchorKidneyName == "" :
+            print("recon error : not setting anchor kidney")
+            return
+        if self.OutputKidneyName == "" :
+            print("recon error : not setting output kidney")
+            return
+        if len(self.m_listExoName) == 0 :
+            print("recon error : not setting tumor or cyst exo")
+            return
 
-        # Mask Copy
-        self._copy_mask()
-        
+        # input your code
         phase = None
         phaseInfoFullPath = self.PhaseInfoFullPath
         if os.path.exists(phaseInfoFullPath) == True :
@@ -90,7 +104,7 @@ class CCommandReconDevelopKidneyBatch(commandRecon.CCommandRecon) :
 
             registrationBlock = registration.CRegistration()
             registrationBlock.InputOptionInfo = self.InputData.OptionInfo
-            registrationBlock.InputMaskPath = self.CopiedMaskPath
+            registrationBlock.InputMaskPath = self.InputMaskPath
             registrationBlock.process()
 
             self._update_phase_offset(self.InputData.OptionInfo, registrationBlock, originOffsetBlock, phase)
@@ -101,8 +115,8 @@ class CCommandReconDevelopKidneyBatch(commandRecon.CCommandRecon) :
             fileSavePhaseInfoBlock.process()
         
         diaphragm = createDiaphragm.CCreateDiaphragm()
-        diaphragm.InputPath = self.CopiedMaskPath
-        diaphragm.OutputPath = self.CopiedMaskPath
+        diaphragm.InputPath = self.InputMaskPath
+        diaphragm.OutputPath = self.InputMaskPath
         diaphragm.InputNiftiName = "Skin.nii.gz"
         diaphragm.process()
 
@@ -123,54 +137,66 @@ class CCommandReconDevelopKidneyBatch(commandRecon.CCommandRecon) :
                 ["Tumor_exo", "Tumor_exo", "DP", -1],
                 ["Tumor_endo", "Tumor_endo", "DP", -1]
         '''
-        # convertMaskPhaseBlock = convertMaskPhase.CConvertMaskPhase()
-        # convertMaskPhaseBlock.InputNiftiContainer = niftiContainerBlock
-        # convertMaskPhaseBlock.MaskCpyPath = maskCpyPath
-        # convertMaskPhaseBlock.TumorPhase = tumorPhase
-        # convertMaskPhaseBlock.process()
 
         resamplingToPhaseBlock = resamplingB.CResamplingToPhase()
         resamplingToPhaseBlock.InputOptionInfo = self.InputData.OptionInfo
-        resamplingToPhaseBlock.InputMaskPath = self.CopiedMaskPath
+        resamplingToPhaseBlock.InputMaskPath = self.InputMaskPath
         resamplingToPhaseBlock.InputPhase = phase
-        resamplingToPhaseBlock.OutputMaskPath = self.CopiedMaskPath
+        resamplingToPhaseBlock.OutputMaskPath = self.InputMaskPath
         resamplingToPhaseBlock.process()
 
         resamplingToMinSpacingBlock = resamplingB.CResamplingToMinSpacing()
-        resamplingToMinSpacingBlock.InputMaskPath = self.CopiedMaskPath
+        resamplingToMinSpacingBlock.InputMaskPath = self.InputMaskPath
         resamplingToMinSpacingBlock.InputOptionInfo = self.InputData.OptionInfo
-        resamplingToMinSpacingBlock.OutputMaskPath = self.CopiedMaskPath
+        resamplingToMinSpacingBlock.OutputMaskPath = self.InputMaskPath
         resamplingToMinSpacingBlock.process()
+
+
+        inputFullPath = os.path.join(self.InputMaskPath, f"{self.AnchorKidneyName}.nii.gz")
+        outputFullPath = os.path.join(self.InputMaskPath, f"{self.OutputKidneyName}.nii.gz")
+        sepKidneyTumorBlock = kbSepKidney.CSepKidneyTumor()
+        sepKidneyTumorBlock.InputKidneyPath = inputFullPath
+        sepKidneyTumorBlock.OutputKidneyPath = outputFullPath
+        for exoName in self.m_listExoName :
+            exoFullPath = os.path.join(self.InputMaskPath, f"{exoName}.nii.gz")
+            sepKidneyTumorBlock.add_tumor_path(exoFullPath)
+        sepKidneyTumorBlock.process()
+        
 
         removeStrictureBlock = removeStricture.CRemoveStricture()
         removeStrictureBlock.InputOptionInfo = self.OptionInfo
-        removeStrictureBlock.InputMaskPath = self.CopiedMaskPath
-        removeStrictureBlock.OutputMaskPath = self.CopiedMaskPath
+        removeStrictureBlock.InputMaskPath = self.InputMaskPath
+        removeStrictureBlock.OutputMaskPath = self.InputMaskPath
         removeStrictureBlock.process()
 
         reconstructionBlock = reconstruction.CReconstruction()
         reconstructionBlock.InputOptionInfo = self.InputData.OptionInfo
-        reconstructionBlock.InputMaskPath = self.CopiedMaskPath
+        reconstructionBlock.InputMaskPath = self.InputMaskPath
         reconstructionBlock.InputPhase = phase
-        reconstructionBlock.OutputPath = self.ResultPath
+        reconstructionBlock.OutputPath = self.OutputPath
         reconstructionBlock.process()
 
         meshHealingBlock = meshHealing.CMeshHealing()
-        meshHealingBlock.InputPath = self.ResultPath
+        meshHealingBlock.InputPath = self.OutputPath
         meshHealingBlock.InputOptionInfo = self.InputData.OptionInfo
         meshHealingBlock.process()
 
         meshBooleanBlock = meshBoolean.CMeshBoolean()
-        meshBooleanBlock.InputPath = self.ResultPath
+        meshBooleanBlock.InputPath = self.OutputPath
         meshBooleanBlock.InputOptionInfo = self.InputData.OptionInfo
         meshBooleanBlock.process()
 
+        meshDecimationBlok = meshDecimation.CMeshDecimation()
+        meshDecimationBlok.InputPath = self.OutputPath
+        meshDecimationBlok.InputOptionInfo = self.InputData.OptionInfo
+        meshDecimationBlok.process()
+
+        diaphragm.clear()
         removeStrictureBlock.clear()
         reconstructionBlock.clear()
         meshHealingBlock.clear()
         meshBooleanBlock.clear()
-
-        self._process_blender()
+        meshDecimationBlok.clear()
     def process_resampling(self) :
         originMaskPath = self.MaskPath
         if os.path.exists(originMaskPath) == False :
@@ -225,33 +251,33 @@ class CCommandReconDevelopKidneyBatch(commandRecon.CCommandRecon) :
         resamplingToMinSpacingBlock.process()
 
 
+    def add_exo_name(self, exoPath : str) :
+        self.m_listExoName.append(exoPath)
+    def get_exo_name_count(self) -> int :
+        return len(self.m_listExoName)
+    def get_exo_name(self, inx : int) -> str :
+        return self.m_listExoName[inx]
+    def clear_name_path(self) :
+        self.m_listExoName.clear()
     # protected
-    def _copy_mask(self) :
-        dataRootPath = self.OptionInfo.DataRootPath
-        patientID = self.InputData.PatientID
-        patientPath = os.path.join(dataRootPath, patientID)
-        maskPath = os.path.join("02_SAVE", "01_MASK")
 
-        copiedMaskPath = self.CopiedMaskPath
-        if os.path.exists(copiedMaskPath) == False :
-            os.makedirs(copiedMaskPath, exist_ok=True)
 
-        for phase in ["AP", "PP", "DP"] :
-            maskFullPath = os.path.join(patientPath, maskPath, phase)
-            if os.path.exists(maskFullPath) == False :
-                print(f"not found path : {maskFullPath}")
-                continue
-            for file in glob.glob(os.path.join(maskFullPath, "*.nii.gz")):
-                shutil.copy(file, copiedMaskPath)
-    def _process_blender(self) :
-        blenderExe = self.OptionInfo.BlenderExe
-        scriptFullPath = self.InputBlenderScritpFullPath
-        inputPath = self.ResultPath
-        outputPath = self.InputData.OutputPatientPath
+    @property
+    def AnchorKidneyName(self) -> str :
+        return self.m_anchorKidneyName
+    @AnchorKidneyName.setter
+    def AnchorKidneyName(self, anchorKidneyName : str) :
+        self.m_anchorKidneyName = anchorKidneyName
+    @property
+    def OutputKidneyName(self) -> str :
+        return self.m_outputKidneyName
+    @OutputKidneyName.setter
+    def OutputKidneyName(self, outputKidneyName : str) :
+        self.m_outputKidneyName = outputKidneyName
 
-        patientID = self.InputData.PatientID
-        saveName = f"{patientID}_recon"
-        commandRecon.CCommandReconInterface.blender_process(blenderExe, scriptFullPath, self.InputData.OptionInfo.m_jsonPath, inputPath, outputPath, saveName, False)
+
+
+    
     
 
 if __name__ == '__main__' :
