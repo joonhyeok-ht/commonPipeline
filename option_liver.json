@@ -1,6 +1,6 @@
 {
     "Version" : {
-        "Release" : "Common Pipeline v2.0",
+        "Release" : "Common Pipeline v2.1",
         "DESC": "Solution Common Pipeline"
     },
   
@@ -8,21 +8,20 @@
     "CL" : "processCL.sh",
 
     "RegistrationInfo" : [
-        {"Target" : "targetMaskName", "Src" : "srcMaskName", "RigidAABB" : 1},
-        {"Target" : "targetMaskName", "Src" : "srcMaskName", "RigidAABB" : 0}
+        {"Target" : "MPV_PP", "Src" : "MPV_MR", "RigidAABB" : 1},
+        {"Target" : "MPV_PP", "Src" : "MPV_EAP", "RigidAABB" : 0},
+        {"Target" : "MPV_PP", "Src" : "MPV_HVP", "RigidAABB" : 0}
     ],
 
     "ResamplingToPhase" : [
 	    ["inMaskName", "outMaskName", "PP"]
     ],
     "ResamplingToMinSpacing" : [
-	    ["Portal", "Portal_min"],
-        ["Vein", "Vein_min"]
+        ["PV", "PV_min"]
     ],
 
     "Stricture" : [
-        ["Portal_min", "Portal_st"],
-        ["Vein_min", "Vein_st"]
+        ["PV_min", "PV_min_st"]
     ],
 
     "Recon" : [
@@ -31,20 +30,30 @@
 		    "contour" : 10,
 		    "gaussian" : 0,
 		    "algorithm" : "Marching",
-		    "resampling factor" : 1,
+		    "resampling factor" : 2,
 		    "param" : [
 			    [80, 0.18, 0.0],
 			    [20, 0.14, 0.0]
 		    ],
 		    "List" : [
-			    ["Portal", "", "PP", -1],
-                ["Vein", "", "PP", -1],
-                ["Portal_st", "Portal", "PP", 50000],
-                ["Vein_st", "Vein", "PP", 50000]
+			    ["Liver", "Liver", "", 50000],
+                ["PV", "", "", -1],
+                ["HV_IVC", "HV_IVC", "", 50000],
+                ["MPV_PP", "", "", -1],
+                ["MPV_MR", "", "", -1],
+                ["MPV_EAP", "", "", -1],
+                ["MPV_HVP", "", "", -1],
+
+                ["PV_min", "", "", -1],
+                ["PV_min_st", "PV", "", 50000]
 		    ]
 	    }
     ],
     
+    "MeshHealing" : [
+        ["blenderName0", 0],
+        ["blenderName1", 0]
+    ],
     "MeshBoolean" : [
         ["subtraction", "blenderName0", "blenderName1", "blenderName"],
         ["intersection", "blenderName0", "blenderName1", "blenderName"],
@@ -52,9 +61,9 @@
         ["inside", "blenderName0", "blenderName1", "blenderName"],
         ["outside", "blenderName0", "blenderName1", "blenderName"]
     ],
-    "MeshHealing" : [
-        "blenderName0",
-        "blenderName1"
+    "MeshDecimation" : [
+        ["blenderName0", 10000],
+        ["blenderName1", 5000]
     ],
 
     "Blender" : {
@@ -68,11 +77,8 @@
             "blenderName1" : 20
         },
         "Remesh" : {
-            "VoxelSize" : 1,
-            "RemeshList" : {
-                "blenderName0" : 4000,
-                "blenderName1" : 4000
-            }
+            "blenderName0" : [1, 4000],
+            "blenderName1" : [2, 20000]
         },
         "MeshCleanUp" : [
             "blenderName0",
@@ -91,14 +97,13 @@
 		    "smoothingIter" : 10,
 		    "smoothingFactor" : 0.1,
 		    "List" : [
-			    ["Portal", "Portal"],
-                ["Vein", "Vein"]
+			    ["PV", "PV"],
+                ["HV_IVC", "HV_IVC"]
 		    ]
         }
     ],
     "TargetTerritoryList" : [
-        "blenderName0",
-        "blenderName1"
+        "Liver"
     ]
 }
 

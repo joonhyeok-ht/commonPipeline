@@ -1,0 +1,278 @@
+{
+    "Version" : {
+        "Release" : "Common Pipeline v2.1",
+        "DESC": "Solution Common Pipeline - Kidney_Batch"
+    },
+  
+    "DataRootPath" : "/Users/hutom/Desktop/solution/project/anaconda/Solution/Data/Kidney/remodelingTest",
+    "CL" : "processCL.sh",
+
+    "RegistrationInfo" : [
+    ],
+
+    "ResamplingToPhase" : [
+    ],
+    "ResamplingToMinSpacing" : [
+	    ["maskName0", "maskName0"]
+    ],
+
+    "Stricture" : [
+        ["maskName0", "maskName0"]
+    ],
+
+    "Recon" : [
+	    {
+            "name" : "TumorType",
+		    "contour" : 10,
+		    "gaussian" : 0,
+		    "algorithm" : "Marching",
+		    "resampling factor" : 1,
+		    "param" : [
+			    [10, 0.3, 0.0]
+		    ],
+		    "List" : [
+			    ["Kidney_AR", "Kidney_AR", "AP", -1],
+                ["Kidney_AL", "Kidney_AL", "AP", -1],
+                ["Kidney_PR", "Kidney_PR", "PP", -1],
+                ["Kidney_PL", "Kidney_PL", "PP", -1],
+                ["Kidney_DR", "Kidney_DR", "DP", -1],
+                ["Kidney_DL", "Kidney_DL", "DP", -1],
+
+                ["Kidney", "Kidney", "DP", -1],
+                ["Cyst_exo", "Cyst_exo", "DP", -1],
+                ["Cyst_endo", "Cyst_endo", "DP", -1],
+                ["Cyst_exo_new", "Cyst_exo", "", -1],
+                ["Cyst_endo_new", "Cyst_endo", "", -1],
+                ["Tumor_exo", "Tumor_exo", "DP", -1],
+                ["Tumor_endo", "Tumor_endo", "DP", -1]
+		    ]
+	    },
+        {
+            "name" : "VesselType",
+		    "contour" : 10,
+		    "gaussian" : 0,
+		    "algorithm" : "Marching",
+		    "resampling factor" : 2,
+		    "param" : [
+			    [16, 0.9, 0.0]
+		    ],
+		    "List" : [
+			    ["Renal_artery", "Renal_artery", "AP", -1],
+                ["Renal_vein", "Renal_vein", "AP", -1],
+                ["Gonadal_vein", "Gonadal_vein", "AP", -1],
+                ["Ureter", "Ureter", "DP", -1]
+		    ]
+	    },
+        {
+            "name" : "ClassicOrgan",
+		    "contour" : 10,
+		    "gaussian" : 1,
+		    "algorithm" : "Marching",
+		    "resampling factor" : 1,
+		    "param" : [
+			    [20, 0.5, 0.9]
+		    ],
+		    "List" : [
+			    ["Abdominal_wall", "Abdominal_wall", "PP", -1],
+                ["Skin", "Skin", "PP", -1],
+                ["Liver", "Liver", "PP", -1],
+                ["Duodenum", "Duodenum", "PP", -1],
+                ["Spleen", "Spleen", "PP", -1],
+                ["Pancreas", "Pancreas", "PP", -1],
+                ["Rectus", "Rectus", "PP", -1],
+                ["Diaphragm", "Diaphragm", "PP", -1]
+		    ]
+	    },
+        {
+            "name" : "ClassicVessel",
+		    "contour" : 10,
+		    "gaussian" : 1,
+		    "algorithm" : "Marching",
+		    "resampling factor" : 1,
+		    "param" : [
+			    [15, 0.2, 0.3]
+		    ],
+		    "List" : [
+			    ["Aorta", "Aorta", "AP", -1],
+                ["IVC", "IVC", "AP", -1],
+                ["POI-Ureter", "POI-Ureter", "DP", -1],
+                ["POI-Hilum", "POI-Hilum", "DP", -1],
+                ["TP_Hilum", "TP_Hilum", "DP", -1],
+                ["TP_Ureter", "TP_Ureter", "DP", -1],
+                ["TP_Rib12", "TP_Rib12", "DP", -1],
+                ["Rectus_R", "Rectus_R", "DP", -1],
+                ["Rectus_L", "Rectus_L", "DP", -1]
+		    ]
+	    },
+        {
+            "name" : "Medulla",
+		    "contour" : 10,
+		    "gaussian" : 0,
+		    "algorithm" : "Marching",
+		    "resampling factor" : 1,
+		    "param" : [
+			    [15, 0.2, 0.3]
+		    ],
+		    "List" : [
+			    ["Medulla", "Medulla", "AP", -1]
+		    ]
+	    },
+        {
+            "name" : "Bone",
+		    "contour" : 10,
+		    "gaussian" : 1,
+		    "algorithm" : "Marching",
+		    "resampling factor" : 1,
+		    "param" : [
+			    [40, 0.7, 0.6]
+		    ],
+		    "List" : [
+			    ["Bone", "Bone", "PP", -1],
+                ["Psoas_muscle", "Psoas_muscle", "PP", -1]
+		    ]
+	    },
+        {
+            "name" : "OrganGallbladder",
+		    "contour" : 10,
+		    "gaussian" : 1,
+		    "algorithm" : "Marching",
+		    "resampling factor" : 1,
+		    "param" : [
+			    [20, 0.5, 0.8]
+		    ],
+		    "List" : [
+			    ["Gallbladder", "Gallbladder", "PP", -1]
+		    ]
+	    }
+    ],
+    
+    "MeshHealing" : [
+        ["blenderName0", 0],
+        ["blenderName1", 0]
+    ],
+    "MeshBoolean" : [
+        ["subtraction", "blenderName0", "blenderName1", "blenderName"],
+        ["intersection", "blenderName0", "blenderName1", "blenderName"],
+        ["union", "blenderName0", "blenderName1", "blenderName"],
+        ["inside", "blenderName0", "blenderName1", "blenderName"],
+        ["outside", "blenderName0", "blenderName1", "blenderName"]
+    ],
+    "MeshDecimation" : [
+        ["blenderName0", 10000],
+        ["blenderName1", 5000]
+    ],
+
+    "Blender" : {
+        "BlenderExe" : "/Applications/Blender.app/Contents/MacOS/Blender",
+        "Decimation" : {
+            "Skin":12000,
+            "Abdominal_wall":20000,
+            "Bone":30000,
+            "Psoas_muscle":2000,
+            "Ureter":10000,
+            "Tumor":600,
+            "Cyst":400,
+            "Tumor_exo":600,
+            "Tumor_endo":600,
+            "Cyst_exo":400,
+            "Cyst_endo":400,
+            "Renal_artery":12000,
+            "Renal_vein":12000, 
+            "Gallbladder":1000,
+            "Liver":10000,
+            "Pancreas":2000,
+            "Spleen":2000,
+            "Stomach":6000, 
+            "Duodenum":6000,
+            "Medulla":10000,
+            "Rectus":4000,
+            "Gonadal_vein":2000, 
+            "Sup_artery":2000,
+            "Inf_artery":2000
+        },
+        "DecimationByRatio" : {
+            "blenderName0" : 20,
+            "blenderName1" : 20
+        },
+        "Remesh" : {
+            "Kidney" : [2, 20000],
+            "IVC" : [2, 20000],
+            "Aorta" : [2, 20000],
+            "Kidney_RS*" : [2, 2000]
+        },
+        "SeparatedSTLNameList" : [
+            "Renal_artery",
+            "Renal_vein",
+            "Ureter"
+        ],
+        "MeshCleanUp" : [
+            "Aorta",
+            "IVC",
+            "Cyst",
+            "Kidney",
+            "Medulla",
+            "Tumor",
+            "Ureter",
+            "Ureter_in",
+            "Ureter_out",
+            "Renal_artery",
+            "Renal_artery_in",
+            "Renal_artery_out",
+            "Renal_vein",
+            "Renal_vein_in",
+            "Renal_vein_out",
+            "Gonadal_vein",
+            "Sup_artery",
+            "Inf_artery",
+            
+            "Kidney_RS*",
+            "Rectus_*"
+        ],
+        "SmartUV" : [
+            "Cyst",
+            "Diaphragm",
+            "Tumor",
+            "Kidney",
+            "Kidney_AR",
+            "Kidney_AL",
+            "Medulla",
+            "Kidney_PR",
+            "Kidney_PL",
+            "Abdominal_wall",
+            "Psoas_muscle",
+            "Skin",
+            "Liver",
+            "Gallbladder" ,
+            "Duodenum",
+            "Spleen",
+            "Pancreas",
+            "Rectus",
+            "Kidney_DR",
+            "Kidney_DL"
+        ]
+    },
+
+    "Centerline" : [
+        {
+		    "advancementRatio" : 1.001,
+		    "resamplingLength" : 1.0,
+		    "smoothingIter" : 10,
+		    "smoothingFactor" : 0.1,
+		    "List" : [
+			    ["Renal_artery", "Renal_artery"],
+                ["ARA", "ARA"],
+                ["RA_1", "RA_1"],
+                ["RA_2", "RA_2"],
+                ["RA_3", "RA_3"],
+                ["RA_4", "RA_4"],
+                ["RA_5", "RA_5"],
+                ["Rectus_L", "Rectus_L"],
+                ["Rectus_R", "Rectus_R"]
+		    ]
+        }
+    ],
+    "TargetTerritoryList" : [
+        "Kidney"
+    ]
+}
+

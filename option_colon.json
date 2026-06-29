@@ -1,15 +1,15 @@
 {
     "Version" : {
-        "Release" : "Common Pipeline v2.0",
+        "Release" : "Common Pipeline v2.1",
         "DESC": "Solution Common Pipeline"
     },
   
-    "DataRootPath" : "/Users/hutom/Desktop/solution/project/anaconda/Solution/Data/Colon/rectumMergeTest",
+    "DataRootPath" : "/Users/hutom/Desktop/solution/project/anaconda/Solution/Data/Colon/uterus_cl_test",
     "CL" : "processCL.sh",
 
     "RegistrationInfo" : [
-        {"Target" : "sacrum", "Src" : "sacrum-MR", "RigidAABB" : 1},
-        {"Target" : "sacrum", "Src" : "sacrum-AP", "RigidAABB" : 0}
+        {"Target" : "sacrum_PP", "Src" : "sacrum_MR", "RigidAABB" : 1},
+        {"Target" : "sacrum_PP", "Src" : "sacrum_AP", "RigidAABB" : 0}
     ],
 
     "ResamplingToPhase" : [
@@ -49,8 +49,9 @@
 			    [20, 0.5, 0.87]
 		    ],
 		    "List" : [
-			    ["sacrum", "sacrum", "PP", -1],
-			    ["sacrum-AP", "sacrum-AP", "AP", -1]
+			    ["sacrum_AP", "sacrum_AP", "AP", -1],
+			    ["sacrum_PP", "sacrum_PP", "PP", -1],
+                ["ilium_PP", "ilium_PP", "PP", -1]
 		    ]
 	    },
         {
@@ -77,7 +78,9 @@
 			    [20, 0.9, 0.0]
 		    ],
 		    "List" : [
-                ["sacrum-MR", "sacrum-MR", "MR", -1]
+                ["sacrum_MR", "sacrum_MR", "MR", -1],
+                ["levator-ani_MR", "levator-ani_MR", "MR", -1],
+                ["uterus-MR", "uterus-MR", "MR", -1]
 		    ]
 	    },
         {
@@ -87,18 +90,19 @@
 		    "algorithm" : "Marching",
 		    "resampling factor" : 1,
 		    "param" : [
-			    [80, 0.18, 0.0],
-			    [20, 0.14, 0.0]
+			    [20, 0.5, 0.87]
 		    ],
 		    "List" : [
-                ["levator-ani_PP", "", "PP", -1],
-                ["pubo_PP", "pubo_PP", "PP", -1],
-                ["pubo_AP", "pubo_AP", "AP", -1],
-                ["pubo_MR", "pubo_MR", "MR", -1]
+                ["levator-ani_AP", "levator-ani_AP", "AP", -1],
+                ["levator-ani_PP", "levator-ani_PP", "PP", -1]
 		    ]
         }
     ],
     
+    "MeshHealing" : [
+        ["blenderName0", 0],
+        ["blenderName1", 0]
+    ],
     "MeshBoolean" : [
         ["subtraction", "blenderName0", "blenderName1", "blenderName"],
         ["intersection", "blenderName0", "blenderName1", "blenderName"],
@@ -106,9 +110,9 @@
         ["inside", "blenderName0", "blenderName1", "blenderName"],
         ["outside", "blenderName0", "blenderName1", "blenderName"]
     ],
-    "MeshHealing" : [
-        "colon",
-        "rectum"
+    "MeshDecimation" : [
+        ["blenderName0", 10000],
+        ["blenderName1", 5000]
     ],
 
     "Blender" : {
@@ -122,11 +126,8 @@
             "blenderName1" : 20
         },
         "Remesh" : {
-            "VoxelSize" : 1,
-            "RemeshList" : {
-                "blenderName0" : 4000,
-                "blenderName1" : 4000
-            }
+            "blenderName0" : [1, 4000],
+            "blenderName1" : [2, 20000]
         },
         "MeshCleanUp" : [
             "blenderName0",
@@ -147,7 +148,8 @@
 		    "List" : [
 			    ["colon", "colon"],
                 ["rectum", "rectum"],
-                ["artery-all", "artery-all"]
+                ["artery-all", "artery-all"],
+                ["uterus-MR", "uterus-MR"]
 		    ]
         }
     ],

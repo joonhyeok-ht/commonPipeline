@@ -30,7 +30,7 @@ echo "en: $en"
 python --version
 
 # Python 스크립트 실행 (인자 포함)
-python /Users/hutom/Desktop/solution/project/anaconda/Solution/UnitTestPrev/CommonPipeline_20/processCL.py --file "$file" --index "$index" --vtp "$vtp" --cellID "$cellID" --en "$en"
+python /Users/hutom/Desktop/solution/project/anaconda/Solution/UnitTestPrev/CommonPipeline_21/processCL.py --file "$file" --index "$index" --vtp "$vtp" --cellID "$cellID" --en "$en"
 
 
 # Python 버전 확인

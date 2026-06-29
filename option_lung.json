@@ -1,10 +1,10 @@
 {
     "Version" : {
-        "Release" : "Common Pipeline v2.0",
+        "Release" : "Common Pipeline v2.1",
         "DESC": "Solution Common Pipeline"
     },
   
-    "DataRootPath" : "/Users/hutom/Desktop/solution/project/anaconda/Solution/Data/Lung/remodelingTest",
+    "DataRootPath" : "/Users/hutom/Desktop/solution/project/anaconda/Solution/Data/Lung/uvTest",
     "CL" : "processCL.sh",
 
     "RegistrationInfo" : [
@@ -18,13 +18,17 @@
     "ResamplingToMinSpacing" : [
 	    ["Artery_R", "Artery_R_min"],
         ["Vein_R", "Vein_R_min"],
-        ["Bronchus", "Bronchus_min"]
+        ["Bronchus", "Bronchus_min"],
+
+        ["Artery_L", "Artery_L_min"]
     ],
 
     "Stricture" : [
         ["Artery_R_min", "Artery_R_st"],
         ["Vein_R_min", "Vein_R_st"],
-        ["Bronchus_min", "Bronchus_st"]
+        ["Bronchus_min", "Bronchus_st"],
+
+        ["Artery_L_min", "Artery_L_st"]
     ],
 
     "Recon" : [
@@ -39,17 +43,66 @@
 			    [20, 0.14, 0.0]
 		    ],
 		    "List" : [
-			    ["Artery_R", "", "PP", -1],
-                ["Vein_R", "", "PP", -1],
-                ["Bronchus", "", "PP", -1],
+			    ["Artery_R", "", "", -1],
+                ["Vein_R", "", "", -1],
+                ["Bronchus", "", "", -1],
 
-                ["Artery_R_st", "Artery_R", "PP", 50000],
-                ["Vein_R_st", "Vein_R", "PP", 50000],
-                ["Bronchus_st", "Bronchus_R", "PP", 50000]
+                ["Artery_R_min", "", "", -1],
+                ["Vein_R_min", "", "", -1],
+                ["Bronchus_min", "", "", -1],
+
+                ["Artery_R_st", "Artery_R", "", 50000],
+                ["Vein_R_st", "Vein_R", "", 50000],
+                ["Bronchus_st", "Bronchus", "", 50000],
+
+                ["Artery_L", "", "", -1],
+
+                ["Artery_L_min", "", "", -1],
+
+                ["Artery_L_st", "Artery_L", "", 50000]
+		    ]
+	    },
+        {
+            "name" : "uvTestType",
+		    "contour" : 10,
+		    "gaussian" : 0,
+		    "algorithm" : "Marching",
+		    "resampling factor" : 1,
+		    "param" : [
+			    [80, 0.18, 0.0],
+			    [20, 0.14, 0.0]
+		    ],
+		    "List" : [
+			    ["Left_Lung", "Left_Lung", "PP", -1],
+                ["LLL", "LLL", "PP", 5000],
+                ["LUL", "LUL", "PP", 5000],
+
+                ["Right_Lung", "Right_Lung", "PP", -1],
+                ["RLL", "RLL", "PP", 5000],
+                ["RML", "RML", "PP", 5000],
+                ["RUL", "RUL", "PP", 5000]
+		    ]
+	    },
+        {
+            "name" : "uvTestTPType",
+		    "contour" : 10,
+		    "gaussian" : 1,
+		    "algorithm" : "Marching",
+		    "resampling factor" : 1,
+		    "param" : [
+			    [1, 0.0, 0.0]
+		    ],
+		    "List" : [
+                ["TP", "TP", "PP", -1]
 		    ]
 	    }
     ],
-    
+
+    "MeshHealing" : [
+        ["Left_Lung", 0],
+        ["Right_Lung", 0],
+        ["blenderName0", 0]
+    ],
     "MeshBoolean" : [
         ["subtraction", "blenderName0", "blenderName1", "blenderName"],
         ["intersection", "blenderName0", "blenderName1", "blenderName"],
@@ -57,10 +110,13 @@
         ["inside", "blenderName0", "blenderName1", "blenderName"],
         ["outside", "blenderName0", "blenderName1", "blenderName"]
     ],
-    "MeshHealing" : [
-        "blenderName0",
-        "blenderName1"
+    "MeshDecimation" : [
+        ["Left_Lung", 10000],
+        ["Left_Lung", 5000],
+        ["Right_Lung", 10000],
+        ["Right_Lung", 5000]
     ],
+
 
     "Blender" : {
         "BlenderExe" : "/Applications/Blender.app/Contents/MacOS/Blender",
@@ -73,15 +129,13 @@
             "blenderName1" : 20
         },
         "Remesh" : {
-            "VoxelSize" : 1,
-            "RemeshList" : {
-                "blenderName0" : 4000,
-                "blenderName1" : 4000
-            }
+            "blenderName0" : [1, 4000],
+            "blenderName1" : [2, 20000]
         },
         "MeshCleanUp" : [
             "blenderName0",
-            "blenderName1"
+            "blenderName1",
+            "Bronchus"
         ],
         "SmartUV" : [
             "blenderName0",
@@ -98,7 +152,9 @@
 		    "List" : [
 			    ["Artery_R", "Artery_R"],
                 ["Vein_R", "Vein_R"],
-                ["Bronchus_R", "Bronchus_R"]
+                ["Bronchus", "Bronchus"],
+
+                ["Artery_L", "Artery_L"]
 		    ]
         }
     ],

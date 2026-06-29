@@ -1,6 +1,6 @@
 {
     "Version" : {
-        "Release" : "Common Pipeline v2.0",
+        "Release" : "Common Pipeline v2.1",
         "DESC": "Solution Common Pipeline"
     },
   
@@ -64,6 +64,10 @@
 	    }
     ],
     
+    "MeshHealing" : [
+        ["blenderName0", 0],
+        ["blenderName1", 0]
+    ],
     "MeshBoolean" : [
         ["subtraction", "blenderName0", "blenderName1", "blenderName"],
         ["intersection", "blenderName0", "blenderName1", "blenderName"],
@@ -71,9 +75,9 @@
         ["inside", "blenderName0", "blenderName1", "blenderName"],
         ["outside", "blenderName0", "blenderName1", "blenderName"]
     ],
-    "MeshHealing" : [
-        "blenderName0",
-        "blenderName1"
+    "MeshDecimation" : [
+        ["blenderName0", 10000],
+        ["blenderName1", 5000]
     ],
 
     "Blender" : {
@@ -93,11 +97,8 @@
             "blenderName1" : 20
         },
         "Remesh" : {
-            "VoxelSize" : 1,
-            "RemeshList" : {
-                "blenderName0" : 4000,
-                "blenderName1" : 4000
-            }
+            "blenderName0" : [1, 4000],
+            "blenderName1" : [2, 20000]
         },
         "MeshCleanUp" : [
             "blenderName0",

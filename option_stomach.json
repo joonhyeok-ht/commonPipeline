@@ -4,44 +4,82 @@
         "DESC": "Solution Common Pipeline"
     },
   
-    "DataRootPath" : "/Users/hutom/Desktop/solution/project/anaconda/Solution/Data/Colon/KNUCH_025_all",
+    "DataRootPath" : "/Users/hutom/Desktop/solution/project/anaconda/Solution/Data/Stomach/restric_test",
     "CL" : "processCL.sh",
 
     "RegistrationInfo" : [
-        {"Target" : "targetMaskName", "Src" : "srcMaskName", "RigidAABB" : 1},
-        {"Target" : "targetMaskName", "Src" : "srcMaskName", "RigidAABB" : 0}
+        {"Target" : "name0", "Src" : "name1", "RigidAABB" : 1}
     ],
 
     "ResamplingToPhase" : [
-	    ["inMaskName", "outMaskName", "PP"]
+        ["name0", "name0", "PP"]
     ],
     "ResamplingToMinSpacing" : [
-	    ["inMaskName", "outMaskName"]
+	    ["Main_Artery", "Main_Artery_min"]
     ],
 
     "Stricture" : [
-        ["inMaskName", "outMaskName"],
-        ["inMaskName", "outMaskName"]
+        ["Main_Artery", "Main_Artery_st"]
     ],
 
     "Recon" : [
-	    {
-            "name" : "name",
+        {
+            "name" : "ClassicVesselType",
 		    "contour" : 10,
 		    "gaussian" : 0,
 		    "algorithm" : "Marching",
 		    "resampling factor" : 1,
 		    "param" : [
-			    [80, 0.2, 0.0],
-			    [20, 0.1, 0.0],
-			    [10, 0.1, 0.0]
+			    [16, 0.8, 0.01]
 		    ],
 		    "List" : [
-			    ["maskName0", "blenderName0", "PP", 10000],
-			    ["maskName1", "blenderName1", "PP", 10000],
-                ["maskName2", "blenderName2", "PP", 10000]
+                ["Main_Artery_st", "Main_Artery_Old", "", 50000]
 		    ]
-	    }
+        },
+        {
+            "name" : "VesselMultiType",
+		    "contour" : 10,
+		    "gaussian" : 0,
+		    "algorithm" : "Marching",
+		    "resampling factor" : 2,
+		    "param" : [
+			    [80, 0.18, 0.0],
+			    [20, 0.14, 0.0]
+		    ],
+		    "List" : [
+                ["Main_Artery", "Main_Artery", "", 50000],
+                ["Main_Artery_min", "Main_Artery_min", "", 50000],
+                ["Whole_Artery", "Whole_Artery", "", 50000]
+		    ]
+        },
+        {
+            "name" : "NewOrganType",
+		    "contour" : 10,
+		    "gaussian" : 1,
+		    "algorithm" : "Marching",
+		    "resampling factor" : 1,
+		    "param" : [
+			    [80, 0.18, 0.0],
+			    [20, 0.14, 0.0],
+                [10, 0.10, 0.0]
+		    ],
+		    "List" : [
+                ["Stomach", "StomachNewGauss", "PP", 6000]
+		    ]
+        },
+        {
+            "name" : "ClassicOrganType",
+		    "contour" : 10,
+		    "gaussian" : 1,
+		    "algorithm" : "Marching",
+		    "resampling factor" : 1,
+		    "param" : [
+			    [20, 0.5, 0.87]
+		    ],
+		    "List" : [
+                ["Stomach", "StomachOld", "PP", 6000]
+		    ]
+        }
     ],
     
     "MeshHealing" : [
@@ -91,8 +129,9 @@
 		    "smoothingIter" : 10,
 		    "smoothingFactor" : 0.1,
 		    "List" : [
-			    ["blenderName0", "jsonName0"],
-                ["blenderName1", "jsonName1"]
+			    ["Main_Artery", "Main_Artery"],
+                ["Main_Artery_min", "Main_Artery_min"],
+                ["Whole_Artery", "Whole_Artery"]
 		    ]
         }
     ],
