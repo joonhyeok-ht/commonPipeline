@@ -1,5 +1,6 @@
 import sys
 import os
+import platform
 import numpy as np
 import shutil
 import vtk
@@ -44,14 +45,21 @@ class CCommandExtractionCL(commandInterface.CCommand) :
         self.m_inputVTPName = ""
         self.m_inputCellID = -1
         self.m_inputEn = 0
-        self.m_captureMode = True
+        self.m_captureMode = False
+        try :
+        # PyInstaller로 패키징된 실행 파일의 경우
+            self.fileAbsPath = sys._MEIPASS
+            self.fileAbsPath = "."
+        except AttributeError :
+            # 개발 환경에서
+            self.fileAbsPath = os.path.abspath(os.path.dirname(__file__))
     def clear(self) :
         # input your code
         self.m_inputIndex = -1
         self.m_inputVTPName = ""
         self.m_inputCellID = -1
         self.m_inputEn = 0
-        self.m_captureMode = True
+        self.m_captureMode = False
         super().clear()
     def process(self) :
         super().process()
@@ -82,12 +90,23 @@ class CCommandExtractionCL(commandInterface.CCommand) :
         print(f"--file : {file}")
         print(f"--index : {str(index)}")
         # result = subprocess.run([shPath], capture_output=True, text=True)
+        if platform.system() != "Windows" : # Darwin or Linux
+            result = subprocess.run([shPath, "--file", file, "--index", str(index), "--vtp", vtpName, "--cellID", str(cellID), "--en", str(en)], capture_output=self.CaptureMode, text=self.CaptureMode)
+        else : #Windows
+            bat = os.path.abspath(os.path.join(optionPath, self.OptionInfo.CL))
+            cmd = ["cmd", "/c", bat,
+                "--file", file,
+                "--index", str(index),
+                "--vtp", vtpName,
+                "--cellID", str(cellID),
+                "--en", str(en)]           
+            print(f"(WIndows) cmd : {cmd}")
+            result = subprocess.run(cmd, capture_output=True, text=True, encoding="cp949", errors="replace")
         if self.CaptureMode == True :
-            result = subprocess.run([shPath, "--file", file, "--index", str(index), "--vtp", vtpName, "--cellID", str(cellID), "--en", str(en)], capture_output=True, text=True)
             print(result.stdout)
             print(result.stderr)
-        else :
-            result = subprocess.run([shPath, "--file", file, "--index", str(index), "--vtp", vtpName, "--cellID", str(cellID), "--en", str(en)], capture_output=False, text=False)
+        # else :
+            # result = subprocess.run([shPath, "--file", file, "--index", str(index), "--vtp", vtpName, "--cellID", str(cellID), "--en", str(en)], capture_output=False, text=False)
         print(f"-- End Extraction Centerline --")
 
 

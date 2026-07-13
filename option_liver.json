@@ -4,56 +4,131 @@
         "DESC": "Solution Common Pipeline"
     },
   
-    "DataRootPath" : "/Users/hutom/Desktop/solution/project/anaconda/Solution/Data/Liver/remodelingTest",
-    "CL" : "processCL.sh",
+	"DataRootPath" : "C:\\Users\\hutom\\Desktop\\jh_test\\data\\liver\\LIVER0060\\dataRoot_liver_0223_102822",
+   "CL"  : "../app_cl/processCL.bat",
 
     "RegistrationInfo" : [
-        {"Target" : "MPV_PP", "Src" : "MPV_MR", "RigidAABB" : 1},
-        {"Target" : "MPV_PP", "Src" : "MPV_EAP", "RigidAABB" : 0},
-        {"Target" : "MPV_PP", "Src" : "MPV_HVP", "RigidAABB" : 0}
+        {"Target" : "MPV_CT_PP", "Src" : "MPV_CT_AP", "RigidAABB" : 0},
+        {"Target" : "MPV_CT_PP", "Src" : "MPV_CT_DP", "RigidAABB" : 0},
+        {"Target" : "MPV_CT_PP", "Src" : "MPV_MR_HBP", "RigidAABB" : 1}
     ],
 
     "ResamplingToPhase" : [
-	    ["inMaskName", "outMaskName", "PP"]
+
     ],
     "ResamplingToMinSpacing" : [
-        ["PV", "PV_min"]
     ],
 
     "Stricture" : [
-        ["PV_min", "PV_min_st"]
+        ["MPV_CT_PP", "MPV_CT_PP_st"],
+        ["MPV_CT_AP", "MPV_CT_AP_st"],
+        ["MPV_CT_DP", "MPV_CT_DP_st"], 
+        ["MPV_MR_HBP", "MPV_MR_HBP_st"],
+        ["Artery", "Artery_st"],
+        ["Portal", "Portal_st"],
+        ["Vein", "Vein_st"],
+        ["Duct", "Duct_st"]
     ],
 
     "Recon" : [
 	    {
-            "name" : "remodelingType",
+            "name" : "VesselType",
 		    "contour" : 10,
 		    "gaussian" : 0,
 		    "algorithm" : "Marching",
-		    "resampling factor" : 2,
+		    "resampling factor" : 1,
 		    "param" : [
 			    [80, 0.18, 0.0],
 			    [20, 0.14, 0.0]
 		    ],
 		    "List" : [
-			    ["Liver", "Liver", "", 50000],
-                ["PV", "", "", -1],
-                ["HV_IVC", "HV_IVC", "", 50000],
-                ["MPV_PP", "", "", -1],
-                ["MPV_MR", "", "", -1],
-                ["MPV_EAP", "", "", -1],
-                ["MPV_HVP", "", "", -1],
-
-                ["PV_min", "", "", -1],
-                ["PV_min_st", "PV", "", 50000]
+			    ["MPV_CT_PP", "", "PP", -1],
+                ["MPV_CT_AP", "", "AP", -1],
+                ["MPV_CT_DP", "", "DP", -1], 
+                ["MPV_MR_HBP", "", "MR", -1], 
+			    ["MPV_CT_PP_st", "MPV_CT_PP", "PP", 5000],
+                ["MPV_CT_AP_st", "MPV_CT_AP", "AP", 5000],
+                ["MPV_CT_DP_st", "MPV_CT_DP", "DP", 5000], 
+                ["MPV_MR_HBP_st", "MPV_MR_HBP", "MR", 5000], 
+                ["Artery", "", "AP", -1],
+                ["Vein", "", "DP", -1],
+                ["Portal", "", "PP", -1],
+                ["Duct", "", "MR", -1],
+                ["S1", "S1", "PP", 2000],
+                ["S2", "S2", "PP", 2000],
+                ["S3", "S3", "PP", 2000],
+                ["S4", "S4", "PP", 2000],
+                ["S23", "S23", "PP", 2000],
+                ["S34", "S34", "PP", 2000],
+                ["S24", "S24", "PP", 2000],
+                ["S234", "S234", "PP", 2000],
+                ["S5", "S5", "PP", 2000],
+                ["S6", "S6", "PP", 2000],
+                ["S7", "S7", "PP", 2000],
+                ["S8", "S8", "PP", 2000],
+                ["S56", "S56", "PP", 2000],
+                ["S57", "S57", "PP", 2000],
+                ["S58", "S58", "PP", 2000],
+                ["S67", "S67", "PP", 2000],
+                ["S68", "S68", "PP", 2000],
+                ["S78", "S78", "PP", 2000],
+                ["S567", "S567", "PP", 2000],
+                ["S568", "S568", "PP", 2000],
+                ["S578", "S578", "PP", 2000],
+                ["S678", "S678", "PP", 2000],
+                ["S5678", "S5678", "PP", 2000],
+                ["LPV", "LPV", "PP", 2000],
+                ["RPV", "RPV", "PP", 2000],
+                ["Duct", "Duct", "PP", -1],
+                ["CA", "CA", "AP", 2000],
+                ["CD", "CD", "MR", 2000],
+                ["Duct_min", "", "MR", -1],
+                ["Artery_st", "Artery", "AP", 7000],
+                ["Vein_st", "Vein", "DP", 40000],
+                ["Portal_st", "Portal", "PP", 40000],
+                ["Duct_st", "Duct", "MR", 2500]
+		    ]
+	    },
+        {
+            "name" : "OrganType",
+		    "contour" : 10,
+		    "gaussian" : 1,
+		    "algorithm" : "Marching",
+		    "resampling factor" : 1,
+		    "param" : [
+			    [20, 0.5, 0.87]
+		    ],
+		    "List" : [
+                ["Abdominal_wall_liver", "Abdominal_wall_liver", "DP", -1],
+                ["Skin", "Skin", "DP", -1],
+                ["Liver", "Liver", "PP", 20000],
+                ["Gallbladder", "Gallbladder", "PP", 1000],
+                ["Tumor", "Tumor", "PP", 1000],
+                ["Tumor_DP", "Tumor_DP", "DP", 1000],
+                ["Cyst", "Cyst", "PP", 1000]
+		    ]
+	    },
+        {
+            "name" : "RibType",
+		    "contour" : 10,
+		    "gaussian" : 1,
+		    "algorithm" : "Marching",
+		    "resampling factor" : 1,
+		    "param" : [
+			    [20, 0.18, 0.0],
+			    [20, 0.14, 0.0]
+		    ],
+		    "List" : [
+                ["Rib", "Rib", "DP", 80000]
 		    ]
 	    }
     ],
-    
+
     "MeshHealing" : [
         ["blenderName0", 0],
-        ["blenderName1", 0]
+        ["blenderName0", 0]
     ],
+    
     "MeshBoolean" : [
         ["subtraction", "blenderName0", "blenderName1", "blenderName"],
         ["intersection", "blenderName0", "blenderName1", "blenderName"],
@@ -62,15 +137,17 @@
         ["outside", "blenderName0", "blenderName1", "blenderName"]
     ],
     "MeshDecimation" : [
-        ["blenderName0", 10000],
-        ["blenderName1", 5000]
+        ["Abdominal_wall_liver", 20000],
+        ["Skin", 12000],
+		["Rib", 20000],
+        ["Rib", 10000]
     ],
 
     "Blender" : {
-        "BlenderExe" : "/Applications/Blender.app/Contents/MacOS/Blender",
+        "BlenderExe" : "Blender",
         "Decimation" : {
-            "blenderName0" : 60000,
-            "blenderName1" : 500
+            "blenderName0" : 20000,
+            "blenderName1" : 60000
         },
         "DecimationByRatio" : {
             "blenderName0" : 20,
@@ -81,12 +158,26 @@
             "blenderName1" : [2, 20000]
         },
         "MeshCleanUp" : [
-            "blenderName0",
-            "blenderName1"
+            "Portal",
+            "Portal_m",
+            "Vein",
+            "Vein_m",
+            "Artery",
+            "Liver",
+            "Gallbladder",
+            "Duct",
+            "Rib",
+            "Tumor",
+            "Tumor_DP",
+            "Cyst"
         ],
         "SmartUV" : [
-            "blenderName0",
-            "blenderName1"
+            "Abdominal_wall_liver",
+            "Gallbladder",
+            "Liver",
+            "Tumor",
+            "Tumor_DP",
+            "Cyst"
         ]
     },
 
@@ -97,13 +188,16 @@
 		    "smoothingIter" : 10,
 		    "smoothingFactor" : 0.1,
 		    "List" : [
-			    ["PV", "PV"],
-                ["HV_IVC", "HV_IVC"]
+			    ["Portal", "Portal"],
+                ["Vein", "Vein"],
+                ["Artery", "Artery"],
+                ["Duct", "Duct"]
 		    ]
         }
     ],
     "TargetTerritoryList" : [
-        "Liver"
+        "blenderName0",
+        "blenderName1"
     ]
 }
 

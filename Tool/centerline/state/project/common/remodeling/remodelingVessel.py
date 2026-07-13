@@ -122,6 +122,21 @@ class CTreeVesselRemodelingAnchorNode :
 
 class CResampledFrameCL(curveInfo.CCLCurve) :
     @staticmethod
+    def get_meshlib(vtkMeshInst : vtk.vtkPolyData) :
+        npVertex = algVTK.CVTK.poly_data_get_vertex(vtkMeshInst)
+        npIndex = algVTK.CVTK.poly_data_get_triangle_index(vtkMeshInst)
+        meshLibInst = algMeshLib.CMeshLib.meshlib_create(npVertex, npIndex)
+        return meshLibInst
+    @staticmethod
+    def get_vtkmesh(meshlibInst) -> vtk.vtkPolyData :
+        npVertex = algMeshLib.CMeshLib.meshlib_get_vertex(meshlibInst)
+        npIndex = algMeshLib.CMeshLib.meshlib_get_index(meshlibInst)
+        vtkMesh = algVTK.CVTK.create_poly_data_triangle(npVertex, npIndex)
+        return vtkMesh
+    @staticmethod
+    def normalize(v : np.ndarray) :
+        return v / np.linalg.norm(v)
+    @staticmethod
     def check_intersected_disk(
         centerP0 : np.ndarray, centerP1 : np.ndarray, 
         t0 : np.ndarray, t1 : np.ndarray,
@@ -135,8 +150,8 @@ class CResampledFrameCL(curveInfo.CCLCurve) :
         p1 = centerP1.reshape(-1)
         t0 = t0.reshape(-1)
         t1 = t1.reshape(-1)
-        n0 = CTreeVesselRemodeling.normalize(t0)
-        n1 = CTreeVesselRemodeling.normalize(t1)
+        n0 = CResampledFrameCL.normalize(t0)
+        n1 = CResampledFrameCL.normalize(t1)
 
         # cross product -> 교차선 방향(비정규)
         d = np.cross(n0, n1)
@@ -194,6 +209,143 @@ class CResampledFrameCL(curveInfo.CCLCurve) :
             return end >= start - tol
         else:
             return end > start + tol
+    @staticmethod
+    def find_sharp_bends(vertex : np.ndarray, angle_threshold_deg=30.0) :
+        """
+        vertex: (N, 3)
+        angle_threshold_deg: 이 각도 이상이면 '급격한 꺾임'으로 판단
+
+        return:
+            bend_indices: 꺾이는 지점 index (vertex 기준)
+            angles: 각 지점의 각도 (deg)
+        """
+
+        # resampling으로 겹치는 구간은 없다고 가정한다. 
+
+        # 방향 벡터
+        diff = vertex[1:] - vertex[:-1]
+        norm = np.linalg.norm(diff, axis=1, keepdims=True)
+        norm[norm == 0] = 1.0
+        dir = diff / norm
+
+        # 인접 방향 벡터 간 dot
+        dot = np.sum(dir[:-1] * dir[1:], axis=1)
+        # numerical 안정성
+        dot = np.clip(dot, -1.0, 1.0)
+
+        # 각도 계산 (rad → deg)
+        angles = np.degrees(np.arccos(dot))
+
+        # threshold 이상인 index 찾기
+        bend_mask = angles > angle_threshold_deg
+        bend_indices = np.where(bend_mask)[0] + 1  
+        # +1 하는 이유: i와 i+1 사이 → vertex 기준으로 i+1 위치
+
+        if len(bend_indices) == 0 :
+            bend_indices = None
+
+        return bend_indices, angles
+    @staticmethod
+    def create_sub_cylinder_polydata(
+        npVertex : np.ndarray, npBinormal : np.ndarray, npNormal : np.ndarray,
+        npRadius : np.ndarray,
+        resolution=16
+    ) -> vtk.vtkPolyData :
+        N = len(npVertex)
+        if N < 2 :
+            return None
+
+        if N == 2 :
+            mid_vertex = (npVertex[0] + npVertex[1]) * 0.5
+            mid_binormal = (npBinormal[0] + npBinormal[1]) * 0.5
+            mid_normal = (npNormal[0] + npNormal[1]) * 0.5
+            mid_radius = (npRadius[0] + npRadius[1]) * 0.5
+
+            # insert midpoint
+            npVertex = np.insert(npVertex, 1, mid_vertex, axis=0)
+            npBinormal = np.insert(npBinormal, 1, mid_binormal, axis=0)
+            npNormal = np.insert(npNormal, 1, mid_normal, axis=0)
+            npRadius = np.insert(npRadius, 1, mid_radius, axis=0)
+            N = 3
+
+        vertices = []
+        faces = []
+        circle_idx = []
+
+        for i in range(N) :
+            binormal = npBinormal[i]
+            normal = npNormal[i]
+
+            # circle points
+            circle = []
+            for j in range(resolution) :
+                theta = 2 * np.pi * j / resolution
+                dir_vec = np.sin(theta) * normal + np.cos(theta) * binormal
+                circle.append(npVertex[i] + npRadius[i] * dir_vec)
+
+            idx_start = len(vertices)
+            vertices.extend(circle)
+            circle_idx.append(range(idx_start, idx_start + resolution))
+        
+        # Connect circles 
+        for i in range(N - 1) :
+            c1 = circle_idx[i]
+            c2 = circle_idx[i + 1]
+
+            # 1. 두 단면의 vertex 좌표 가져오기
+            verts1 = np.array([vertices[idx] for idx in c1])
+            verts2 = np.array([vertices[idx] for idx in c2])
+
+            # 2. 두 단면 vertex 쌍 간 거리 계산
+            dists = np.linalg.norm(verts1[:, None, :] - verts2[None, :, :], axis=2)
+
+            # 3. 최소 거리 쌍 (i,j) 찾기
+            i_min, j_min = np.unravel_index(np.argmin(dists), dists.shape)
+
+            # 4. 두 단면 모두 np.roll 적용
+            c1 = list(np.roll(c1, -i_min))
+            c2 = list(np.roll(c2, -j_min))
+
+            for j in range(resolution) :
+                v0 = c1[j]
+                v1 = c1[(j + 1) % resolution]
+                v2 = c2[j]
+                v3 = c2[(j + 1) % resolution]
+
+                # triangle strip
+                faces.append([v0, v1, v2])
+                faces.append([v2, v1, v3])
+
+        # Start cap
+        c0 = circle_idx[0]
+        center0 = len(vertices)
+        vertices.append(npVertex[0])
+        for j in range(resolution) :
+            faces.append([center0, c0[(j + 1) % resolution], c0[j]])
+        # End cap
+        cN = circle_idx[-1]
+        centerN = len(vertices)
+        vertices.append(npVertex[-1])
+        for j in range(resolution) :
+            faces.append([centerN, cN[j], cN[(j + 1) % resolution]])
+        
+        vertices = np.array(vertices)
+        faces = np.array(faces)
+        polydata = algVTK.CVTK.create_poly_data_triangle(vertices, faces)
+
+        return polydata
+    @staticmethod
+    def boolean_union(vtkMeshA : vtk.vtkPolyData, vtkMeshB : vtk.vtkPolyData) -> vtk.vtkPolyData :
+        meshA = CResampledFrameCL.get_meshlib(vtkMeshA)
+        meshB = CResampledFrameCL.get_meshlib(vtkMeshB)
+        retMesh = algMeshLib.CMeshLib.meshlib_boolean_union(meshA, meshB)
+
+        if retMesh is None :
+            return None
+        else :
+            retMesh = algMeshLib.CMeshLib.meshlib_healing(retMesh)
+
+        return CResampledFrameCL.get_vtkmesh(retMesh)
 
 
     def __init__(self) :
@@ -223,21 +375,6 @@ class CResampledFrameCL(curveInfo.CCLCurve) :
         N = len(points)
 
         self._find_resample_index()
-
-        # 개선이라고 생각했지만 잘 안된 것 
-        # self.m_resampledVertex = []
-        # self.m_resampledRadius = []
-        # self.m_resampledTangent = None
-        # self.m_resampledNormal = None
-        # self.m_resampledBinormal = None
-
-        # for resampledInx in self.m_resampleIndex :
-        #     self.m_resampledVertex.append(self.m_point[resampledInx])
-        #     self.m_resampledRadius.append(self.m_radius[resampledInx])
-        
-        # self.m_resampledVertex = np.array(self.m_resampledVertex)
-        # self.m_resampledRadius = np.array(self.m_resampledRadius)
-        # self.m_resampledBinormal, self.m_resampledNormal, self.m_resampledTangent = curveInfo.CCLCurve.get_BNT(self.m_resampledVertex, None, None, None)
 
         # 
         self.m_resampledVertex = []
@@ -285,87 +422,124 @@ class CResampledFrameCL(curveInfo.CCLCurve) :
         npBiNormal = np.array(dic["binormal"], dtype=np.float32)
         npNormal = np.array(dic["normal"], dtype=np.float32)
         return (npVertex, npRadius, npBiNormal, npNormal)
-    def create_cylinder_polydata(self, resolution : int = 16) -> vtk.vtkPolyData :
+    def create_cylinder_polydata(self, resolution=16, jointAngle=60.0, jointResolution=30) -> vtk.vtkPolyData :
         """
         points : (N, 3) numpy array
         radii  : (N,) numpy array
         resolution : int, number of vertices per circle, 이 부분은 theta 기준으로 바뀌어야 함 
         return: vertices (M,3), faces (K,3)
         """
+        # 1개로는 cylinder를 만들 수 없음 
+        if self.ResampledVertex.shape[0] <= 1 :
+            return None
 
-        N = len(self.ResampledVertex)
-        vertices = []
-        faces = []
-        circle_idx = []
+        bendInx, _ = CResampledFrameCL.find_sharp_bends(self.ResampledVertex, jointAngle)
+        retMesh = None
 
-        for i in range(N) :
-            binormal = self.ResampledBinormal[i]
-            normal = self.ResampledNormal[i]
+        if bendInx is not None :
+            startInx = 0
+            for endInx in bendInx :
+                refinedVertex = self.m_resampledVertex[startInx : endInx + 1]
+                refinedRadius = self.m_resampledRadius[startInx : endInx + 1]
+                jointRadius = self.m_resampledRadius[endInx]
+                if startInx == 0 :
+                    refinedRadius[0] -= 0.1
+                    refinedBinormal = self.m_resampledBinormal[startInx : endInx + 1]
+                    refinedNormal = self.m_resampledNormal[startInx : endInx + 1]
+                else :
+                    refinedBinormal, refinedNormal, _ = curveInfo.CCLCurve.get_BNT(refinedVertex, None, None, None)
+                refinedRadius[0] -= 0.1
 
-            # circle points
-            circle = []
-            for j in range(resolution) :
-                theta = 2 * np.pi * j / resolution
-                dir_vec = np.sin(theta) * normal + np.cos(theta) * binormal
-                circle.append(self.ResampledVertex[i] + self.ResampledRadius[i] * dir_vec)
+                cylinder = CResampledFrameCL.create_sub_cylinder_polydata(
+                    refinedVertex, refinedBinormal, refinedNormal, refinedRadius, resolution
+                )
+                if retMesh is None :
+                    retMesh = cylinder
+                else :
+                    retMesh = CResampledFrameCL.boolean_union(retMesh, cylinder)
 
-            idx_start = len(vertices)
-            vertices.extend(circle)
-            circle_idx.append(range(idx_start, idx_start + resolution))
-        
-        # Connect circles 
-        for i in range(N - 1) :
-            c1 = circle_idx[i]
-            c2 = circle_idx[i + 1]
+                joint = algVTK.CVTK.create_poly_data_sphere(
+                    self.m_resampledVertex[endInx].reshape(-1, 3),
+                    jointRadius, 
+                    jointResolution
+                )
+                retMesh = CResampledFrameCL.boolean_union(retMesh, joint)
 
-            # v1_first = vertices[c1[0]]
-            # c2_verts = np.array([vertices[idx] for idx in c2])
-            # dists = np.linalg.norm(c2_verts - v1_first, axis=1)
-            # offset = np.argmin(dists)
-            # c2 = list(np.roll(c2, -offset))
+                startInx = endInx
 
-            # 1. 두 단면의 vertex 좌표 가져오기
-            verts1 = np.array([vertices[idx] for idx in c1])
-            verts2 = np.array([vertices[idx] for idx in c2])
+            endInx = len(self.ResampledVertex)
+            refinedVertex = self.m_resampledVertex[startInx : endInx]
+            refinedRadius = self.m_resampledRadius[startInx : endInx]
+            refinedBinormal, refinedNormal, _ = curveInfo.CCLCurve.get_BNT(refinedVertex, None, None, None)
+            cylinder = CResampledFrameCL.create_sub_cylinder_polydata(
+                    refinedVertex, refinedBinormal, refinedNormal, refinedRadius, resolution
+            )
+            retMesh = CResampledFrameCL.boolean_union(retMesh, cylinder)
+        else :
+            retMesh = CResampledFrameCL.create_sub_cylinder_polydata(
+                    self.m_resampledVertex, self.m_resampledBinormal, self.m_resampledNormal,
+                    self.m_resampledRadius,
+                    resolution
+            )
+        return retMesh
+    # def create_cylinder_polydata(self, resolution=16, jointAngle=60.0, jointResolution=30) -> vtk.vtkPolyData :
+    #     """
+    #     points : (N, 3) numpy array
+    #     radii  : (N,) numpy array
+    #     resolution : int, number of vertices per circle, 이 부분은 theta 기준으로 바뀌어야 함 
+    #     return: vertices (M,3), faces (K,3)
+    #     """
+    #     # 1개로는 cylinder를 만들 수 없음 
+    #     if self.ResampledVertex.shape[0] <= 1 :
+    #         return None
 
-            # 2. 두 단면 vertex 쌍 간 거리 계산
-            dists = np.linalg.norm(verts1[:, None, :] - verts2[None, :, :], axis=2)
+    #     bendInx, _ = CResampledFrameCL.find_sharp_bends(self.ResampledVertex, jointAngle)
+    #     retMesh = None
 
-            # 3. 최소 거리 쌍 (i,j) 찾기
-            i_min, j_min = np.unravel_index(np.argmin(dists), dists.shape)
+    #     if bendInx is not None :
+    #         startInx = 0
+    #         for endInx in bendInx :
+    #             refinedVertex = self.m_resampledVertex[startInx : endInx + 1]
+    #             refinedBinormal = self.m_resampledBinormal[startInx : endInx + 1]
+    #             refinedNormal = self.m_resampledNormal[startInx : endInx + 1]
+    #             refinedRadius = self.m_resampledRadius[startInx : endInx + 1]
+    #             refinedRadius[0] -= 0.1
+    #             refinedRadius[-1] -= 0.1
 
-            # 4. 두 단면 모두 np.roll 적용
-            c1 = list(np.roll(c1, -i_min))
-            c2 = list(np.roll(c2, -j_min))
+    #             cylinder = CResampledFrameCL.create_sub_cylinder_polydata(
+    #                 refinedVertex, refinedBinormal, refinedNormal, refinedRadius, resolution
+    #             )
+    #             if retMesh is None :
+    #                 retMesh = cylinder
+    #             else :
+    #                 retMesh = CResampledFrameCL.boolean_union(retMesh, cylinder)
 
-            for j in range(resolution) :
-                v0 = c1[j]
-                v1 = c1[(j + 1) % resolution]
-                v2 = c2[j]
-                v3 = c2[(j + 1) % resolution]
+    #             joint = algVTK.CVTK.create_poly_data_sphere(
+    #                 self.m_resampledVertex[endInx].reshape(-1, 3),
+    #                 self.m_resampledRadius[endInx], 
+    #                 jointResolution
+    #             )
+    #             retMesh = CResampledFrameCL.boolean_union(retMesh, joint)
 
-                # triangle strip
-                faces.append([v0, v1, v2])
-                faces.append([v2, v1, v3])
+    #             startInx = endInx
 
-        # Start cap
-        c0 = circle_idx[0]
-        center0 = len(vertices)
-        vertices.append(self.ResampledVertex[0])
-        for j in range(resolution) :
-            faces.append([center0, c0[(j + 1) % resolution], c0[j]])
-        # End cap
-        cN = circle_idx[-1]
-        centerN = len(vertices)
-        vertices.append(self.ResampledVertex[-1])
-        for j in range(resolution) :
-            faces.append([centerN, cN[j], cN[(j + 1) % resolution]])
-        
-        vertices = np.array(vertices)
-        faces = np.array(faces)
-        polydata = algVTK.CVTK.create_poly_data_triangle(vertices, faces)
-
-        return polydata
+    #         endInx = len(self.ResampledVertex)
+    #         refinedVertex = self.m_resampledVertex[startInx : endInx]
+    #         refinedBinormal = self.m_resampledBinormal[startInx : endInx]
+    #         refinedNormal = self.m_resampledNormal[startInx : endInx]
+    #         refinedRadius = self.m_resampledRadius[startInx : endInx]
+    #         refinedRadius[0] -= 0.1
+    #         cylinder = CResampledFrameCL.create_sub_cylinder_polydata(
+    #                 refinedVertex, refinedBinormal, refinedNormal, refinedRadius, resolution
+    #         )
+    #         retMesh = CResampledFrameCL.boolean_union(retMesh, cylinder)
+    #     else :
+    #         retMesh = CResampledFrameCL.create_sub_cylinder_polydata(
+    #                 self.m_resampledVertex, self.m_resampledBinormal, self.m_resampledNormal,
+    #                 self.m_resampledRadius,
+    #                 resolution
+    #         )
+    #     return retMesh
     
 
     # protected
@@ -410,7 +584,8 @@ class CResampledFrameCL(curveInfo.CCLCurve) :
 
                 # 이 부분은 마지막 point를 무조건 포함시킬 것인가?에 대한 판단을 따져봐야 함 
                 if state0RetInx == -1 :
-                    state1RetInx = len(self.m_point) - 1
+                    # state1RetInx = len(self.m_point) - 1
+                    state1RetInx = -1
                     state = 2
             elif state == 1 :
                 state1RetInx = -1
@@ -432,9 +607,12 @@ class CResampledFrameCL(curveInfo.CCLCurve) :
                 
                 # 이 부분은 마지막 point를 무조건 포함시킬 것인가?에 대한 판단을 따져봐야함 
                 if state1RetInx == -1 :
-                    state1RetInx = len(self.m_point) - 1
+                    # state1RetInx = len(self.m_point) - 1
                     state = 2
             else :
+                if state1RetInx == -1 :
+                    break
+
                 self.m_resampleIndex.append(state1RetInx)
 
                 if state1RetInx == len(self.m_point) - 1 :
@@ -463,7 +641,9 @@ class CResampledFrameCL(curveInfo.CCLCurve) :
 
 
 class CTreeVesselRemodeling :
-    s_minRadius = 0.2
+    # s_minRadius = 0.2
+    # s_minRadius = 0.4
+    s_minRadius = 0.5
 
     @staticmethod
     def get_meshlib(vtkMeshInst : vtk.vtkPolyData) :
@@ -617,6 +797,11 @@ class CTreeVesselRemodeling :
             node = listNode.pop(0)
             iCnt = node.conn_clid_count()
 
+            # dbg start
+            # if node.conn_clid(0) == 24 :
+                # p = 0
+            # dbg end
+
             mergedVertex = None
             mergedRadius = None
             for inx in range(0, iCnt) :
@@ -641,38 +826,41 @@ class CTreeVesselRemodeling :
 
                 spherePos = resampledVertex[nearestVertexInx].reshape(-1, 3)
                 sphereRadius = resampledRadius[nearestVertexInx]
-
-                outsideInx = CTreeVesselRemodeling.find_outside_inx_by_vertex(spherePos, sphereRadius, mergedVertex)
-                if outsideInx != -1 and outsideInx !=  mergedVertex.shape[0] - 1 :
-                    mergedVertex = np.vstack((spherePos.reshape(-1, 3), mergedVertex[outsideInx : ]))
-                    mergedRadius = np.hstack((mergedRadius[outsideInx], mergedRadius[outsideInx : ]))
-                    # mergedVertex = np.vstack((spherePos.reshape(-1, 3), mergedVertex[ : ]))
-                    # mergedRadius = np.hstack((mergedRadius[outsideInx], mergedRadius[ : ]))
             else :
                 spherePos = mergedVertex[0].reshape(-1, 3)
                 sphereRadius = mergedRadius[0]
-                outsideInx = CTreeVesselRemodeling.find_outside_inx_by_vertex(spherePos, sphereRadius, mergedVertex)
-                if outsideInx != -1 and outsideInx !=  mergedVertex.shape[0] - 1 :
-                    mergedVertex = np.vstack((spherePos.reshape(-1, 3), mergedVertex[outsideInx : ]))
-                    mergedRadius = np.hstack((mergedRadius[outsideInx], mergedRadius[outsideInx : ]))
+            
+            outsideInx = CTreeVesselRemodeling.find_outside_inx_by_vertex(spherePos, sphereRadius, mergedVertex)
+            if outsideInx != -1 and outsideInx !=  mergedVertex.shape[0] - 1 :
+                mergedVertex = np.vstack((spherePos.reshape(-1, 3), mergedVertex[outsideInx : ]))
+                mergedRadius = np.hstack((mergedRadius[outsideInx], mergedRadius[outsideInx : ]))
+            else :
+                mergedVertex = np.vstack((spherePos.reshape(-1, 3), mergedVertex[-1].reshape(-1, 3)))
+                mergedRadius = np.hstack((mergedRadius[outsideInx], mergedRadius[-1]))
 
         
-            # radius margin 적용 
-            mergedRadius = np.maximum(mergedRadius + self.InputRadiusMargin, self.s_minRadius)
             # 1.0 간격의 resampling 추가 
             mergedVertex, mergedRadius = CTreeVesselRemodeling.resampling_centerline(mergedVertex, mergedRadius, 1.0)
-            # mergedVertex = CTreeVesselRemodeling.smooth_centerline(mergedVertex, 1.0)
+            # radius margin 적용 
+            mergedRadius = np.maximum(mergedRadius + self.InputRadiusMargin, self.s_minRadius)
                 
             # resampling 
             if mergedVertex.shape[0] >= 3 :
+                # dbg start
+                # if node.conn_clid(0) == 20 :
+                #     p = 0
+                # dbg end
+
                 resampledCL = CResampledFrameCL()
                 resampledCL.process(mergedVertex, mergedRadius)
 
                 node.ResampledVertex = resampledCL.ResampledVertex
                 node.ResampledRadius = resampledCL.ResampledRadius
-                node.PolyData = resampledCL.create_cylinder_polydata()
+                node.PolyData = resampledCL.create_cylinder_polydata(resolution=16, jointAngle=60.0, jointResolution=16)
 
+                # dbg start
                 # resampledCL.save_resampling_data("/Users/hutom/Desktop/solution/project/anaconda/Solution/Test2/0013_remodeling_vessel/resampling.json")
+                # dbg end 
 
                 if self.m_listResampleVertex is None :
                     self.m_listResampleVertex = node.ResampledVertex.copy()
@@ -685,10 +873,6 @@ class CTreeVesselRemodeling :
                         (self.m_listResampleRadius, node.ResampledRadius), axis=0
                     )
 
-                mesh = CTreeVesselRemodeling.get_meshlib(node.PolyData)
-                mesh = algMeshLib.CMeshLib.meshlib_healing(mesh)
-                node.PolyData = CTreeVesselRemodeling.get_vtkmesh(mesh)
-
                 iCnt = node.child_node_count()
                 for inx in range(0, iCnt) :
                     childNode = node.child_node(inx)
@@ -698,6 +882,10 @@ class CTreeVesselRemodeling :
             return None
         
         mergedMesh = None
+
+        # dbg start
+        # dbgInx = 0
+        # dbg end
 
         listNode = [self.m_rootAnchorNode]
         while listNode :
@@ -711,11 +899,20 @@ class CTreeVesselRemodeling :
                     retMesh = CTreeVesselRemodeling.bridge_mesh(mergedMesh, node.PolyData)
                     if retMesh is None :
                         print("passed remodeling ..")
-                        # savePath = "/Users/hutom/Desktop/solution/project/anaconda/Solution/UnitTestPrev/CommonPipeline_20/Tool/dbg"
-                        # algVTK.CVTK.save_poly_data_stl(os.path.join(savePath, "mergedMesh.stl"), mergedMesh)
-                        # algVTK.CVTK.save_poly_data_stl(os.path.join(savePath, "nodePolyData.stl"), node.PolyData)
                     else :
                         mergedMesh = retMesh
+
+                    # dbg start
+                    # path = "/Users/hutom/Desktop/solution/project/anaconda/Solution/UnitTestPrev/CommonPipeline_21/Tool/dbg"
+                    # rootCLID = node.conn_clid(0)
+                    # fileName = os.path.join(path, f"{dbgInx:04d}_{rootCLID}")
+                    # stlFullPath = f"{fileName}_nodeply.stl"
+                    # algVTK.CVTK.save_poly_data_stl(stlFullPath, node.PolyData)
+                    # stlFullPath = f"{fileName}_retMesh.stl"
+                    # if retMesh is not None :
+                    #     algVTK.CVTK.save_poly_data_stl(stlFullPath, retMesh)
+                    # dbgInx += 1
+                    # dbg end
             
             iCnt = node.child_node_count()
             for inx in range(0, iCnt) :

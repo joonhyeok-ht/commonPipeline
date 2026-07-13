@@ -44,6 +44,8 @@ import command.commandLoadingPatient as commandLoadingPatient
 import command.commandExtractionCL as commandExtractionCL
 import command.commandRecon as commandRecon
 
+import com.componentSelectionCell as componentSelectionCell
+
 
 import dlgCommon as dlgCommon
 
@@ -57,11 +59,6 @@ import tabState as tabState
 
 
 class CTabStateMain(tabState.CTabState) :
-    s_guideCellType = "guideCell"
-    '''
-    groupID : 0 고정
-    ID : only 0, 1
-    '''
     s_listStepName = [
         "Recon",
         "Centerline",
@@ -76,18 +73,19 @@ class CTabStateMain(tabState.CTabState) :
             self._on_btn_centerline,
             self._on_btn_clean
         ]
+        # component는 생성자 시작전에 미리 생성해 놓음 
+        self.m_comSelectionCell = componentSelectionCell.CComSelectionCellUI(self, "-- Selection Centerline Start --")
 
         super().__init__(mediator)
         # input your code
-        self.m_stateSelCell = 0
-        self.m_selCellID = -1
         self.m_bReady = True
     def clear(self) :
         # input your code
         self.m_btnCL = None
         self.m_bReady = False
-        self.m_stateSelCell = 0
-        self.m_selCellID = -1
+        if self.m_comSelectionCell is not None :
+            self.m_comSelectionCell.clear()
+        self.m_comSelectionCell = None
         super().clear()
 
 
@@ -105,11 +103,16 @@ class CTabStateMain(tabState.CTabState) :
 
         self.setui_clinfo_inx(dataInst.CLInfoIndex)
         self._command_clinfo_inx()
-        self.setui_check_sel_cell(False)
+        self.m_comSelectionCell.process_init()
     def process(self) :
         pass
     def process_end(self) :
-        self.setui_check_sel_cell(False)
+        dataInst = self.get_data()
+        if dataInst.Ready == False :
+            print("not setting patient path")
+            return
+        
+        self.m_comSelectionCell.process_end()
 
     def changed_project_type(self) :
         optionFullPath = os.path.join(self.m_mediator.FilePath, "option.json")
@@ -203,20 +206,7 @@ class CTabStateMain(tabState.CTabState) :
         self.m_tvCLInfo.clicked.connect(self._on_tv_clicked_clinfo)
         tabLayout.addWidget(self.m_tvCLInfo)
 
-        self.m_checkSelectionStartCell = QCheckBox("Selection Start Cell ")
-        self.m_checkSelectionStartCell.setChecked(False)
-        self.m_checkSelectionStartCell.stateChanged.connect(self._on_check_sel_cell)
-        tabLayout.addWidget(self.m_checkSelectionStartCell)
-
-        layout = QHBoxLayout()
-        label = QLabel("CellID ")
-        label.setStyleSheet("QLabel { margin-top: 1px; margin-bottom: 1px; }")
-        label.setSizePolicy(QSizePolicy.Policy.Minimum, QSizePolicy.Policy.Fixed)
-        self.m_editBoxCellID = QLineEdit()
-        layout.addWidget(self.m_checkSelectionStartCell)
-        layout.addWidget(label)
-        layout.addWidget(self.m_editBoxCellID)
-        tabLayout.addLayout(layout)
+        tabLayout.addWidget(self.m_comSelectionCell.GroupBox)
 
         btn = QPushButton("Extraction Centerline")
         btn.setStyleSheet(self.get_btn_stylesheet())
@@ -233,50 +223,19 @@ class CTabStateMain(tabState.CTabState) :
 
     
     def clicked_mouse_rb(self, clickX, clickY) :
-        if self.m_stateSelCell == 0 : 
+        dataInst = self.get_data()
+        if dataInst.Ready == False :
             return
         
-        guideCell = self.__get_guide_cell_obj(0)
-        polyData = guideCell.PolyData
-        if polyData is None :
-            return
-        
-        guideCell = self.__get_guide_cell_obj(1)
-        guideCell.PolyData = polyData
-        
-        self.setui_cellID(self.m_selCellID)
+        self.m_comSelectionCell.click(clickX, clickY)
         self.m_mediator.update_viewer()
     def mouse_move(self, clickX, clickY) :
-        # vessel과 마우스와의 picking 수행
-        # 가장 가까운 cell을 찾음
-        # cell의 중심 vertex를 guideEPKey에 세팅 
-        listExceptKeyType = [
-            data.CData.s_skelTypeCenterline,
-            CTabStateMain.s_guideCellType,
-        ]
-
-        if self.m_stateSelCell == 0 : 
+        dataInst = self.get_data()
+        if dataInst.Ready == False :
             return
-
-        self.m_selCellID = self.m_mediator.picking_cellid(clickX, clickY, listExceptKeyType)
-        if self.m_selCellID <= 0 :
-            return
-
-        if self.m_selCellID > 0 :
-            dataInst = self.get_data()
-            clinfoInx = self.getui_clinfo_inx()
-
-            vesselKey = data.CData.make_key(data.CData.s_vesselType, clinfoInx, 0)
-            vesselObj = dataInst.find_obj_by_key(vesselKey)
-            if vesselObj is None :
-                return
-            vesselPolyData = vesselObj.PolyData
-
-            pickedPoly = algVTK.CVTK.get_sub_polydata_by_face_fast(vesselPolyData, [self.m_selCellID])
-            retPoly = vtk.vtkPolyData()
-            retPoly.DeepCopy(pickedPoly)
-            guideCell = self.__get_guide_cell_obj(0)
-            guideCell.PolyData = retPoly
+        
+        listExceptKeyType = [data.CData.s_skelTypeCenterline]
+        self.m_comSelectionCell.move(clickX, clickY, listExceptKeyType)
         self.m_mediator.update_viewer()
 
     # ui 
@@ -313,10 +272,6 @@ class CTabStateMain(tabState.CTabState) :
         )
         self.m_tvCLInfo.setCurrentIndex(QIndex)
         self.m_tvCLInfo.blockSignals(False)
-    def setui_cellID(self, cellID : int) :
-        self.m_editBoxCellID.setText(str(cellID))
-    def setui_check_sel_cell(self, bCheck : bool) -> bool :
-        self.m_checkSelectionStartCell.setChecked(bCheck)
     
     def getui_edit_input_path(self) -> str :
         return self.m_editInputPath.text()
@@ -361,17 +316,6 @@ class CTabStateMain(tabState.CTabState) :
             output = self.m_modelCLInfo.item(row, 2).text()
             return output
         return ""
-    def getui_check_sel_cell(self) -> bool :
-        if self.m_checkSelectionStartCell.isChecked() :
-            return True
-        return False
-    def getui_cellID(self) -> int :
-        cellID = -1
-        try :
-            cellID = int(self.m_editBoxCellID.text())
-        except ValueError:
-            cellID = -1
-        return cellID
     
     # command
     def command_option_path(self, optionFullPath : str) :
@@ -476,8 +420,8 @@ class CTabStateMain(tabState.CTabState) :
         self.m_mediator.ref_key_type_groupID(dataInst.s_vesselType, clinfoinx)
         if skeleton is not None :
             self.m_mediator.ref_key_type_groupID(dataInst.s_skelTypeCenterline, clinfoinx)
-        
-        self.setui_check_sel_cell(False)
+
+        self.m_comSelectionCell.setui_check_active(False)
         
         self.m_mediator.update_viewer()
     def _command_extraction_cl(self) :
@@ -501,7 +445,7 @@ class CTabStateMain(tabState.CTabState) :
         vtpName = skelinfo.BlenderName
 
         # centerline 시작 cell이 있으므로 현재 vessel polydata를 vtp로 저장. 
-        startCellID = self.getui_cellID()
+        startCellID = self.m_comSelectionCell.getui_cell_id()
         if startCellID < 0 :
             startCellID = 0
 
@@ -638,63 +582,11 @@ class CTabStateMain(tabState.CTabState) :
             return
         dataInst.CLInfoIndex = clinfoInx
         self._command_clinfo_inx()
-    def _on_check_sel_cell(self, state) :
-        '''
-        state
-            - 0 : unchecked
-            - 1 : partially checked
-            - 2 : checked
-        '''
-        if state == 2 :
-            bCheck = True
-            self.__set_selcellstate(1)
-        else :
-            bCheck = False
-            self.__set_selcellstate(0)
     def _on_btn_extraction_centerline(self) :
         self._command_extraction_cl()
         
 
     # private
-    def __set_selcellstate(self, state : int) :
-        # state exit
-        if self.m_stateSelCell >= 0 :
-            if self.m_stateSelCell == 0 :
-                pass
-            else :
-                self.m_mediator.remove_key_type(CTabStateMain.s_guideCellType)
-
-        self.m_stateSelCell = state
-        self.setui_cellID(-1)
-        self.m_selCellID = -1
-
-        # state start
-        if self.m_stateSelCell >= 0 :
-            if self.m_stateSelCell == 0 :
-                pass
-            else :
-                self.m_picker = vtk.vtkCellPicker()
-                self.m_picker.SetTolerance(0.0005)
-                self.__create_guide_cell_key(0, algLinearMath.CScoMath.to_vec3([1.0, 0.9, 0.2]))
-                self.__create_guide_cell_key(1, algLinearMath.CScoMath.to_vec3([0.0, 1.0, 0.0]))
-                self.m_mediator.ref_key_type(CTabStateMain.s_guideCellType)
-        self.m_mediator.update_viewer()
-    def __create_guide_cell_key(self, id : int, color : np.ndarray) -> str :
-        guideKey = data.CData.make_key(CTabStateMain.s_guideCellType, 0, id)
-        guideObj = vtkObjInterface.CVTKObjInterface()
-        guideObj.KeyType = CTabStateMain.s_guideCellType
-        guideObj.Key = guideKey
-        guideObj.Color = color
-        guideObj.Opacity = 1.0
-
-        dataInst = self.get_data()
-        dataInst.add_vtk_obj(guideObj)
-        return guideKey
-    def __get_guide_cell_obj(self, id : int) -> vtkObjInterface.CVTKObjInterface :
-        guideKey = data.CData.make_key(CTabStateMain.s_guideCellType, 0, id)
-        dataInst = self.get_data()
-        guideObj = dataInst.find_obj_by_key(guideKey)
-        return guideObj
     
 
     # slot

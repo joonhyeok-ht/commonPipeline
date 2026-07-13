@@ -663,6 +663,20 @@ class CTabStateVesselRemodeling(tabState.CTabState) :
         self.m_mediator.add_skeleton_cl_obj(node.SkeletonEn, node.SkelGroupID)
         self.m_mediator.ref_key_type_groupID(data.CData.s_skelTypeCenterline, node.SkelGroupID)
 
+        # dbg start
+        # cl = skeleton.get_centerline(179)
+        # polydata = algVTK.CVTK.create_poly_data_spheres(cl.Vertex, 0.4)
+        # key = data.CData.make_key("dbgType", 0, 0)
+        # dbgObj = vtkObjInterface.CVTKObjInterface()
+        # dbgObj.KeyType = "dbgType"
+        # dbgObj.Key = key
+        # dbgObj.Color = algLinearMath.CScoMath.to_vec3([1.0, 0.0, 0.0])
+        # dbgObj.Opacity = 1.0
+        # dbgObj.PolyData = polydata
+        # dataInst.add_vtk_obj(dbgObj)
+        # self.m_mediator.ref_key(key)
+        # dbg end
+
         if os.path.exists(vtpFullPath) :
             os.remove(vtpFullPath)
         if os.path.exists(clOutputFullPath) :
@@ -749,15 +763,12 @@ class CTabStateVesselRemodeling(tabState.CTabState) :
             if mergedMesh is None :
                 mergedMesh = remodelingMesh
             else :
-                meshA = CTabStateVesselRemodeling.get_meshlib(mergedMesh)
-                meshB = CTabStateVesselRemodeling.get_meshlib(remodelingMesh)
-
-                mesh = algMeshLib.CMeshLib.meshlib_boolean_union(meshA, meshB)
+                mesh = remodelingVessel.CResampledFrameCL.boolean_union(mergedMesh, remodelingMesh)
                 if mesh is None :
                     print("failed remodeling union")
                 else :
-                    mesh = algMeshLib.CMeshLib.meshlib_healing(mesh)
-                    mergedMesh = CTabStateVesselRemodeling.get_vtkmesh(mesh)
+                    mergedMesh = mesh
+
         if mergedMesh is None :
             QMessageBox.information(self.m_mediator, "Alarm", "failed Remodeling anchorNode")
             return
@@ -782,7 +793,9 @@ class CTabStateVesselRemodeling(tabState.CTabState) :
         triCnt = optioninfo.find_tricnt_of_blendername(blenderName)
 
         if triCnt > -1 :
+            # triCnt = 40000
             meshlib = CTabStateVesselRemodeling.get_meshlib(mergedMesh)
+            # meshlib = algMeshLib.CMeshLib.meshlib_healing(meshlib)
             meshlib = algMeshLib.CMeshLib.meshlib_decimation(meshlib, triCnt)
             meshlib = algMeshLib.CMeshLib.meshlib_healing(meshlib)
             mergedMesh = CTabStateVesselRemodeling.get_vtkmesh(meshlib)
@@ -995,15 +1008,12 @@ class CTabStateVesselRemodeling(tabState.CTabState) :
             return mergedMesh
         
         for remodelingMesh in retListMergedMesh :
-            meshA = CTabStateVesselRemodeling.get_meshlib(mergedMesh)
-            meshB = CTabStateVesselRemodeling.get_meshlib(remodelingMesh)
-
-            mesh = algMeshLib.CMeshLib.meshlib_boolean_union(meshA, meshB)
+            mesh = remodelingVessel.CResampledFrameCL.boolean_union(mergedMesh, remodelingMesh)
             if mesh is None :
                 print(f"failed remodeling merge undetected vessel")
             else :
-                mesh = algMeshLib.CMeshLib.meshlib_healing(mesh)
-                mergedMesh = CTabStateVesselRemodeling.get_vtkmesh(mesh)
+                mergedMesh = mesh
+
         return mergedMesh
 
 

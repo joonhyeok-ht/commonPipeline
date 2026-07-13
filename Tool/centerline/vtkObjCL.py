@@ -43,7 +43,7 @@ class CVTKObjCL(vtkObjInterface.CVTKObjInterface) :
         appendFilter = vtk.vtkAppendPolyData()
         for clPtInx in range(0, clPtCnt) :
             pos = cl.get_vertex(clPtInx)
-            polyData = algVTK.CVTK.create_poly_data_sphere(pos, clSize)
+            polyData = algVTK.CVTK.create_poly_data_sphere(pos, clSize, 10)
             appendFilter.AddInputData(polyData)
         appendFilter.Update()
 

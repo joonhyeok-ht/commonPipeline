@@ -101,7 +101,7 @@ class CFolderCreator :
         #terminalCmd = f"cp -rf {inputPath} {outputPath}"
         #os.system(terminalCmd)
     def __copy_mask_with_json(self) :
-        with open(self.s_blockTypeFileName, 'r') as fp :
+        with open(self.s_blockTypeFileName, 'r', encoding="utf-8") as fp :
             listNiftiFileName = json.load(fp)["reconFileNames"]
 
         print("-- copy mask with json --")        
